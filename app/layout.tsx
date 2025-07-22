@@ -8,19 +8,19 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Web3导航 - 最全面的区块链资源导航",
+  title: "蓬门今始为君开 - 最全面的区块链资源导航",
   description: "专业的Web3导航网站，提供融资信息、交易数据工具、测试网水龙头、空投机会、新手教程和交易所邀请链接",
   keywords: "Web3, 区块链, 导航, 融资, 空投, 水龙头, DeFi, NFT, 交易数据",
   authors: [{ name: "Awan Smith" }],
   openGraph: {
-    title: "Web3导航 - 最全面的区块链资源导航",
+    title: "蓬门今始为君开 - 最全面的区块链资源导航",
     description: "专业的Web3导航网站，一站式获取区块链相关资源",
     type: "website",
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Web3导航",
+    title: "蓬门今始为君开",
     description: "专业的Web3导航网站",
     creator: "@wnyn12075574",
   },
@@ -54,7 +54,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#3b82f6" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
           <Toaster />
         </ThemeProvider>

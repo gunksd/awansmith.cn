@@ -24,7 +24,7 @@ export default function HomePage() {
                   <div className="md:hidden">
                     <Sidebar />
                   </div>
-                  <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">Web3导航</h1>
+                  <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">蓬门今始为君开</h1>
                 </div>
                 <ThemeToggle />
               </div>

@@ -66,6 +66,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "羊驼，查defi相关数据",
       url: "https://defillama.com/",
       tags: ["DeFi", "数据", "TVL"],
+      customLogo: "/logos/defillama.jpeg",
     },
   ],
   faucet: [
