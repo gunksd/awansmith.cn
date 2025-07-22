@@ -190,55 +190,52 @@ export function Sidebar() {
                   支持一下
                 </Button>
 
-                {/* 使用条件渲染而不是AnimatePresence避免不必要的动画 */}
-                {showDonation && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-4"
-                  >
-                    {/* Bitcoin地址 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <div className="text-center mb-3">
-                        <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
-                        <Image
-                          src="/btc-qr.png"
-                          alt="Bitcoin QR Code"
-                          width={96}
-                          height={96}
-                          className="mx-auto mb-2 rounded-lg"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
-                          {btcAddress}
-                        </p>
-                        <CopyButton address={btcAddress} type="Bitcoin" />
-                      </div>
+                {/* 使用CSS控制显示/隐藏，完全避免重新渲染 */}
+                <div
+                  className={`space-y-4 transition-all duration-300 ${
+                    showDonation ? "opacity-100 max-h-[1000px]" : "opacity-0 max-h-0 overflow-hidden"
+                  }`}
+                >
+                  {/* Bitcoin地址 */}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="text-center mb-3">
+                      <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
+                      <Image
+                        src="/btc-qr.png"
+                        alt="Bitcoin QR Code"
+                        width={96}
+                        height={96}
+                        className="mx-auto mb-2 rounded-lg"
+                      />
                     </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
+                        {btcAddress}
+                      </p>
+                      <CopyButton address={btcAddress} type="Bitcoin" />
+                    </div>
+                  </div>
 
-                    {/* Ethereum地址 */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <div className="text-center mb-3">
-                        <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
-                        <Image
-                          src="/eth-qr.png"
-                          alt="Ethereum QR Code"
-                          width={96}
-                          height={96}
-                          className="mx-auto mb-2 rounded-lg"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
-                          {ethAddress}
-                        </p>
-                        <CopyButton address={ethAddress} type="Ethereum" />
-                      </div>
+                  {/* Ethereum地址 */}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <div className="text-center mb-3">
+                      <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
+                      <Image
+                        src="/eth-qr.png"
+                        alt="Ethereum QR Code"
+                        width={96}
+                        height={96}
+                        className="mx-auto mb-2 rounded-lg"
+                      />
                     </div>
-                  </motion.div>
-                )}
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
+                        {ethAddress}
+                      </p>
+                      <CopyButton address={ethAddress} type="Ethereum" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.aside>
@@ -356,53 +353,50 @@ export function Sidebar() {
                 支持一下
               </Button>
 
-              {/* 使用条件渲染而不是AnimatePresence */}
-              {showDonation && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center mb-3">
-                        <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
-                        <Image
-                          src="/btc-qr.png"
-                          alt="Bitcoin QR Code"
-                          width={120}
-                          height={120}
-                          className="mx-auto mb-2 rounded-lg"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{btcAddress}</p>
-                        <CopyButton address={btcAddress} type="Bitcoin" />
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* 使用CSS控制显示/隐藏，完全避免重新渲染 */}
+              <div
+                className={`space-y-4 transition-all duration-300 ${
+                  showDonation ? "opacity-100 max-h-[1000px]" : "opacity-0 max-h-0 overflow-hidden"
+                }`}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center mb-3">
+                      <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
+                      <Image
+                        src="/btc-qr.png"
+                        alt="Bitcoin QR Code"
+                        width={120}
+                        height={120}
+                        className="mx-auto mb-2 rounded-lg"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{btcAddress}</p>
+                      <CopyButton address={btcAddress} type="Bitcoin" />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center mb-3">
-                        <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
-                        <Image
-                          src="/eth-qr.png"
-                          alt="Ethereum QR Code"
-                          width={120}
-                          height={120}
-                          className="mx-auto mb-2 rounded-lg"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{ethAddress}</p>
-                        <CopyButton address={ethAddress} type="Ethereum" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center mb-3">
+                      <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
+                      <Image
+                        src="/eth-qr.png"
+                        alt="Ethereum QR Code"
+                        width={120}
+                        height={120}
+                        className="mx-auto mb-2 rounded-lg"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{ethAddress}</p>
+                      <CopyButton address={ethAddress} type="Ethereum" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </motion.div>
           </>
         )}
