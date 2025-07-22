@@ -58,13 +58,15 @@
   }
 }
 
-/* 侧边栏状态样式 */
-.sidebar-collapsed main {
-  margin-left: 5rem; /* 80px */
-}
+/* 桌面端侧边栏状态样式 */
+@media screen and (min-width: 768px) {
+  .sidebar-collapsed main {
+    margin-left: 5rem; /* 80px */
+  }
 
-.sidebar-expanded main {
-  margin-left: 20rem; /* 320px */
+  .sidebar-expanded main {
+    margin-left: 20rem; /* 320px */
+  }
 }
 
 /* 自定义滚动条样式 */
