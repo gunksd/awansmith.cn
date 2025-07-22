@@ -34,6 +34,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "合约数据分析",
       url: "https://www.coinglass.com/zh",
       tags: ["合约", "数据分析", "期货"],
+      customLogo: "/logos/coinglass.png",
     },
     {
       id: "18",
@@ -49,6 +50,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "数字货币行情分析",
       url: "https://coinmarketcap.com/zh/",
       tags: ["行情", "分析", "市值"],
+      customLogo: "/logos/coinmarketcap.png",
     },
     {
       id: "20",
@@ -56,6 +58,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "代币解锁等",
       url: "https://tokenomist.ai/",
       tags: ["代币", "解锁", "分析"],
+      customLogo: "/logos/tokenomist.png",
     },
     {
       id: "21",
@@ -72,6 +75,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "Goerli测试网络水龙头，免费获取测试ETH",
       url: "https://faucetlink.to/",
       tags: ["Goerli", "ETH", "测试网"],
+      customLogo: "/logos/faucet-link.png",
     },
     {
       id: "5",
@@ -79,6 +83,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "QuickNode提供的Goerli测试网ETH水龙头",
       url: "https://faucet.quicknode.com/ethereum/goerli",
       tags: ["Goerli", "ETH", "QuickNode"],
+      customLogo: "/logos/quicknode.png",
     },
     {
       id: "6",
@@ -86,6 +91,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "Paradigm提供的以太坊测试网水龙头",
       url: "https://faucet.paradigm.xyz/",
       tags: ["ETH", "测试网", "Paradigm"],
+      customLogo: "/logos/paradigm-faucet.png",
     },
     {
       id: "7",
@@ -93,6 +99,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "Alchemy提供的Sepolia测试网ETH水龙头",
       url: "https://www.alchemy.com/faucets/ethereum-sepolia",
       tags: ["Sepolia", "ETH", "Alchemy"],
+      customLogo: "/logos/alchemy.png",
     },
     {
       id: "8",
@@ -116,6 +123,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "比特币测试网水龙头，获取测试BTC",
       url: "https://faucet.opnet.org/",
       tags: ["Bitcoin", "测试网", "BTC"],
+      customLogo: "/logos/bitcoin-testnet.png",
     },
     {
       id: "11",
@@ -131,6 +139,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "OKX提供的多链测试网水龙头服务",
       url: "https://web3.okx.com/zh-hans/faucet",
       tags: ["多链", "OKX", "测试网"],
+      customLogo: "/logos/okx-faucet.png",
     },
   ],
   airdrop: [
@@ -140,7 +149,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "专业的空投信息聚合平台，及时获取最新空投机会",
       url: "https://www.airdrop-yupaopao.xyz/",
       tags: ["空投", "聚合", "机会"],
-      customLogo: "/logos/yupaopao.png",
+      customLogo: "/logos/yupaopao-airdrop.png",
     },
   ],
   tutorial: [
@@ -150,7 +159,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "最全入门指南，created by 柴郡 https://x.com/0xCheshire",
       url: "https://pale-blackberry-88c.notion.site/17bf1b18f5d380598595d5306f6540f9",
       tags: ["教程", "Web3", "新手"],
-      customLogo: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
+      customLogo: "/logos/notion-tutorial.png",
     },
   ],
   exchange: [
@@ -168,6 +177,7 @@ export const websiteData: Record<string, Website[]> = {
       description: "知名加密货币交易平台，支持现货、合约、期权交易",
       url: "https://okx.com/join/46997457",
       tags: ["交易所", "OKX", "邀请"],
+      customLogo: "/logos/okx-exchange.png",
     },
   ],
 }

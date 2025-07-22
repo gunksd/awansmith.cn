@@ -13,7 +13,37 @@ export function cn(...inputs: ClassValue[]) {
 export function getFaviconUrl(url: string): string {
   try {
     const domain = new URL(url).hostname
-    return `https://www.google.com/s2/favicons?sz=64&domain_url=${domain}`
+
+    // 对于需要梯子的网站，使用备用方案
+    const blockedDomains = [
+      "x.com",
+      "twitter.com",
+      "github.com",
+      "youtube.com",
+      "google.com",
+      "facebook.com",
+      "instagram.com",
+      "telegram.org",
+      "discord.com",
+      "reddit.com",
+    ]
+
+    const isBlocked = blockedDomains.some((blocked) => domain.includes(blocked))
+
+    if (isBlocked) {
+      // 使用国内可访问的favicon服务或返回默认图标
+      return `/placeholder.svg?height=32&width=32&text=${encodeURIComponent(domain.charAt(0).toUpperCase())}`
+    }
+
+    // 使用多个备用favicon服务
+    const faviconServices = [
+      `https://favicon.yandex.net/favicon/${domain}`,
+      `https://www.google.com/s2/favicons?sz=64&domain_url=${domain}`,
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+    ]
+
+    // 返回第一个服务，如果失败会在组件中fallback
+    return faviconServices[0]
   } catch {
     return "/placeholder.svg?height=32&width=32&text=🌐"
   }
