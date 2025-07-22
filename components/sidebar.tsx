@@ -1,15 +1,75 @@
 "use client"
 
+import type React from "react"
+
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, ChevronRight, Twitter, ExternalLink, Gift, Menu, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Twitter, ExternalLink, Gift, Menu, X, Copy, Check } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSidebar } from "@/components/sidebar-context"
-import { useState, useEffect } from "react"
+import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
+
+// 复制按钮组件 - 独立管理状态避免父组件重新渲染
+function CopyButton({ address, type }: { address: string; type: string }) {
+  const [isCopied, setIsCopied] = useState(false)
+  const { toast } = useToast()
+  const timeoutRef = useRef<NodeJS.Timeout>()
+
+  const handleCopy = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      try {
+        await navigator.clipboard.writeText(address)
+        setIsCopied(true)
+        toast({
+          title: "复制成功",
+          description: `${type}地址已复制到剪贴板`,
+          duration: 2000,
+        })
+
+        // 清除之前的定时器
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+        }
+
+        // 2秒后重置状态
+        timeoutRef.current = setTimeout(() => {
+          setIsCopied(false)
+        }, 2000)
+      } catch (err) {
+        toast({
+          title: "复制失败",
+          description: "请手动复制地址",
+          variant: "destructive",
+          duration: 2000,
+        })
+      }
+    },
+    [address, type, toast],
+  )
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
+  return (
+    <Button variant="ghost" size="icon" onClick={handleCopy} className="h-8 w-8 flex-shrink-0">
+      {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+    </Button>
+  )
+}
 
 export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar()
@@ -31,6 +91,17 @@ export function Sidebar() {
     expanded: { opacity: 1, x: 0 },
     collapsed: { opacity: 0, x: -20 },
   }
+
+  // BTC和ETH地址
+  const btcAddress = "bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl"
+  const ethAddress = "0x41d5408ce2b7dfd9490c0e769edd493dc878058f"
+
+  // 切换打赏区域显示状态
+  const toggleDonation = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setShowDonation((prev) => !prev)
+  }, [])
 
   // 移动端模态框内容
   const MobileModal = () => (
@@ -112,23 +183,24 @@ export function Sidebar() {
               <div className="space-y-4">
                 <Button
                   variant="outline"
-                  onClick={() => setShowDonation(!showDonation)}
-                  className="w-full py-3 px-4 flex items-center justify-center gap-2 min-h-[44px]"
+                  onClick={toggleDonation}
+                  className="w-full py-3 px-4 flex items-center justify-center gap-2 min-h-[44px] bg-transparent"
                 >
                   <Gift className="h-4 w-4" />
                   支持一下
                 </Button>
 
-                <AnimatePresence>
-                  {showDonation && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="space-y-4"
-                    >
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                {/* 使用条件渲染而不是AnimatePresence避免不必要的动画 */}
+                {showDonation && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4"
+                  >
+                    {/* Bitcoin地址 */}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="text-center mb-3">
                         <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
                         <Image
                           src="/btc-qr.png"
@@ -137,12 +209,18 @@ export function Sidebar() {
                           height={96}
                           className="mx-auto mb-2 rounded-lg"
                         />
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
-                          bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl
-                        </p>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
+                          {btcAddress}
+                        </p>
+                        <CopyButton address={btcAddress} type="Bitcoin" />
+                      </div>
+                    </div>
 
-                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                    {/* Ethereum地址 */}
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <div className="text-center mb-3">
                         <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
                         <Image
                           src="/eth-qr.png"
@@ -151,13 +229,16 @@ export function Sidebar() {
                           height={96}
                           className="mx-auto mb-2 rounded-lg"
                         />
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
-                          0x41d5408ce2b7dfd9490c0e769edd493dc878058f
-                        </p>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed flex-1">
+                          {ethAddress}
+                        </p>
+                        <CopyButton address={ethAddress} type="Ethereum" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </div>
           </motion.aside>
@@ -270,22 +351,22 @@ export function Sidebar() {
 
             {/* 打赏区域 */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <Button variant="outline" onClick={() => setShowDonation(!showDonation)} className="w-full mb-4 group">
+              <Button variant="outline" onClick={toggleDonation} className="w-full mb-4 group bg-transparent">
                 <Gift className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                 支持一下
               </Button>
 
-              <AnimatePresence>
-                {showDonation && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-4"
-                  >
-                    <Card>
-                      <CardContent className="p-4 text-center">
+              {/* 使用条件渲染而不是AnimatePresence */}
+              {showDonation && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center mb-3">
                         <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
                         <Image
                           src="/btc-qr.png"
@@ -294,14 +375,17 @@ export function Sidebar() {
                           height={120}
                           className="mx-auto mb-2 rounded-lg"
                         />
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all">
-                          bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl
-                        </p>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{btcAddress}</p>
+                        <CopyButton address={btcAddress} type="Bitcoin" />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                    <Card>
-                      <CardContent className="p-4 text-center">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center mb-3">
                         <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
                         <Image
                           src="/eth-qr.png"
@@ -310,14 +394,15 @@ export function Sidebar() {
                           height={120}
                           className="mx-auto mb-2 rounded-lg"
                         />
-                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all">
-                          0x41d5408ce2b7dfd9490c0e769edd493dc878058f
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all flex-1">{ethAddress}</p>
+                        <CopyButton address={ethAddress} type="Ethereum" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
             </motion.div>
           </>
         )}
