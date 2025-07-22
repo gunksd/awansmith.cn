@@ -37,9 +37,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: "your-google-verification-code",
-  },,
+  },
+  generator: "v0.dev",
   // 移除icons配置，让Next.js自动使用app/icon.tsx和app/apple-icon.tsx
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({
