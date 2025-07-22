@@ -8,12 +8,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSidebar } from "@/components/sidebar-context"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 
 export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar()
   const [showDonation, setShowDonation] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // 确保组件已挂载，避免 SSR 问题
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const sidebarVariants = {
     expanded: { width: 320 },
@@ -25,6 +32,140 @@ export function Sidebar() {
     collapsed: { opacity: 0, x: -20 },
   }
 
+  // 移动端模态框内容
+  const MobileModal = () => (
+    <AnimatePresence>
+      {isMobileOpen && (
+        <>
+          {/* 遮罩 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileOpen(false)}
+            className="fixed inset-0 bg-black/50 z-[9998]"
+            style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+
+          {/* 侧边栏 */}
+          <motion.aside
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-2xl z-[9999]"
+            style={{ position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 9999 }}
+          >
+            <div className="p-6 h-full overflow-y-auto">
+              {/* 关闭按钮 */}
+              <div className="flex justify-end mb-4">
+                <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} className="w-8 h-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* 用户信息 */}
+              <div className="text-center mb-6">
+                <Image
+                  src="/avatar.png"
+                  alt="Awan Avatar"
+                  width={64}
+                  height={64}
+                  className="rounded-full mx-auto border-4 border-gradient-to-r from-blue-500 to-purple-600 shadow-lg"
+                />
+                <div className="mt-3">
+                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">Awan Smith</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">永远学无止境</p>
+                </div>
+              </div>
+
+              <Separator className="mb-6" />
+
+              {/* 社交链接 */}
+              <div className="space-y-3 mb-6">
+                <Link
+                  href="https://x.com/wnyn12075574"
+                  target="_blank"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  <Twitter className="h-5 w-5 text-blue-500" />
+                  <span className="text-sm font-medium">Twitter</span>
+                  <ExternalLink className="h-4 w-4 ml-auto opacity-60" />
+                </Link>
+
+                <Link
+                  href="https://linktr.ee/Awansmith"
+                  target="_blank"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  <Image src="https://linktr.ee/favicon.ico" alt="Linktree" width={20} height={20} />
+                  <span className="text-sm font-medium">Linktree</span>
+                  <ExternalLink className="h-4 w-4 ml-auto opacity-60" />
+                </Link>
+              </div>
+
+              <Separator className="mb-6" />
+
+              {/* 打赏区域 */}
+              <div className="space-y-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDonation(!showDonation)}
+                  className="w-full py-3 px-4 flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <Gift className="h-4 w-4" />
+                  支持一下
+                </Button>
+
+                <AnimatePresence>
+                  {showDonation && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4"
+                    >
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                        <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
+                        <Image
+                          src="/btc-qr.png"
+                          alt="Bitcoin QR Code"
+                          width={96}
+                          height={96}
+                          className="mx-auto mb-2 rounded-lg"
+                        />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
+                          bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
+                        <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
+                        <Image
+                          src="/eth-qr.png"
+                          alt="Ethereum QR Code"
+                          width={96}
+                          height={96}
+                          className="mx-auto mb-2 rounded-lg"
+                        />
+                        <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
+                          0x41d5408ce2b7dfd9490c0e769edd493dc878058f
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  )
+
   // 移动端渲染汉堡菜单按钮
   const MobileMenuButton = () => (
     <>
@@ -32,135 +173,8 @@ export function Sidebar() {
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* 移动端模态框 */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <>
-            {/* 遮罩 */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileOpen(false)}
-              className="fixed inset-0 bg-black/50 z-[999]"
-            />
-
-            {/* 侧边栏 */}
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-2xl z-[9999]"
-            >
-              <div className="p-6 h-full overflow-y-auto">
-                {/* 关闭按钮 */}
-                <div className="flex justify-end mb-4">
-                  <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(false)} className="w-8 h-8">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* 用户信息 */}
-                <div className="text-center mb-6">
-                  <Image
-                    src="/avatar.png"
-                    alt="Awan Avatar"
-                    width={64}
-                    height={64}
-                    className="rounded-full mx-auto border-4 border-gradient-to-r from-blue-500 to-purple-600 shadow-lg"
-                  />
-                  <div className="mt-3">
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200">Awan Smith</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">永远学无止境</p>
-                  </div>
-                </div>
-
-                <Separator className="mb-6" />
-
-                {/* 社交链接 */}
-                <div className="space-y-3 mb-6">
-                  <Link
-                    href="https://x.com/wnyn12075574"
-                    target="_blank"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
-                    onClick={() => setIsMobileOpen(false)}
-                  >
-                    <Twitter className="h-5 w-5 text-blue-500" />
-                    <span className="text-sm font-medium">Twitter</span>
-                    <ExternalLink className="h-4 w-4 ml-auto opacity-60" />
-                  </Link>
-
-                  <Link
-                    href="https://linktr.ee/Awansmith"
-                    target="_blank"
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
-                    onClick={() => setIsMobileOpen(false)}
-                  >
-                    <Image src="https://linktr.ee/favicon.ico" alt="Linktree" width={20} height={20} />
-                    <span className="text-sm font-medium">Linktree</span>
-                    <ExternalLink className="h-4 w-4 ml-auto opacity-60" />
-                  </Link>
-                </div>
-
-                <Separator className="mb-6" />
-
-                {/* 打赏区域 */}
-                <div className="space-y-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDonation(!showDonation)}
-                    className="w-full py-3 px-4 flex items-center justify-center gap-2 min-h-[44px]"
-                  >
-                    <Gift className="h-4 w-4" />
-                    支持一下
-                  </Button>
-
-                  <AnimatePresence>
-                    {showDonation && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-4"
-                      >
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
-                          <h4 className="font-semibold mb-2 text-orange-600">Bitcoin</h4>
-                          <Image
-                            src="/btc-qr.png"
-                            alt="Bitcoin QR Code"
-                            width={96}
-                            height={96}
-                            className="mx-auto mb-2 rounded-lg"
-                          />
-                          <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
-                            bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl
-                          </p>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-center">
-                          <h4 className="font-semibold mb-2 text-blue-600">Ethereum</h4>
-                          <Image
-                            src="/eth-qr.png"
-                            alt="Ethereum QR Code"
-                            width={96}
-                            height={96}
-                            className="mx-auto mb-2 rounded-lg"
-                          />
-                          <p className="text-xs text-slate-600 dark:text-slate-400 break-all leading-relaxed">
-                            0x41d5408ce2b7dfd9490c0e769edd493dc878058f
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* 使用 Portal 将模态框渲染到 body */}
+      {mounted && createPortal(<MobileModal />, document.body)}
     </>
   )
 
