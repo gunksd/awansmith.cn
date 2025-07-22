@@ -42,7 +42,7 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileOpen(false)}
-              className="fixed inset-0 bg-black/50 z-40"
+              className="fixed inset-0 bg-black/50 z-[999]"
             />
 
             {/* 侧边栏 */}
@@ -51,7 +51,7 @@ export function Sidebar() {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-2xl z-50"
+              className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-2xl z-[9999]"
             >
               <div className="p-6 h-full overflow-y-auto">
                 {/* 关闭按钮 */}

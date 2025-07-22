@@ -17,9 +17,9 @@ export default function HomePage() {
           {/* 主内容区域 */}
           <main className="flex-1 w-full md:transition-all md:duration-300 md:sidebar-collapsed:ml-20 md:sidebar-expanded:ml-80">
             {/* 顶部导航栏 */}
-            <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
+            <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 relative z-50">
                   {/* 移动端汉堡菜单 */}
                   <div className="md:hidden">
                     <Sidebar />
