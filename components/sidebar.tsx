@@ -171,7 +171,7 @@ export function Sidebar() {
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px]"
                   onClick={() => setIsMobileOpen(false)}
                 >
-                  <Image src="https://linktr.ee/favicon.ico" alt="Linktree" width={20} height={20} />
+                  <Image src="/logos/linktree.png" alt="Linktree" width={20} height={20} />
                   <span className="text-sm font-medium">Linktree</span>
                   <ExternalLink className="h-4 w-4 ml-auto opacity-60" />
                 </Link>
@@ -333,7 +333,7 @@ export function Sidebar() {
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
               >
                 <Image
-                  src="https://linktr.ee/favicon.ico"
+                  src="/logos/linktree.png"
                   alt="Linktree"
                   width={20}
                   height={20}
