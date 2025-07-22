@@ -1,0 +1,6 @@
+{
+  // 使用 pnpm 时强制关闭 frozen-lockfile
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  // 仍然走默认 build 脚本（等同于 `pnpm run build`）
+  "buildCommand": "pnpm run build"
+}
