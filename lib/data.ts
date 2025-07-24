@@ -167,8 +167,8 @@ export const websiteData: Record<string, Website[]> = {
     {
       id: "15",
       name: "Binance币安",
-      description: "全球最大的加密货币交易所，通过邀请链接注册享受手续费优惠",
-      url: "https://accounts.marketwebb.systems/register?ref=865223788",
+      description: "全球最大的加密货币交易所，通过我的邀请链接注册享受最高40%手续费优惠",
+      url: "https://www.marketwebb.systems/join?ref=865223788",
       tags: ["交易所", "Binance", "邀请"],
       customLogo: "/logos/binance.jpeg",
     },
