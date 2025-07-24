@@ -1,184 +1,25 @@
 import type { Website } from "./types"
 
+// 默认数据作为fallback，实际数据从数据库获取
 export const websiteData: Record<string, Website[]> = {
-  funding: [
-    {
-      id: "1",
-      name: "RootData",
-      description: "专业的区块链项目数据库，提供最新的融资信息和项目分析",
-      url: "https://cn.rootdata.com/",
-      tags: ["融资", "数据", "分析"],
-      customLogo: "/logos/rootdata.png",
-    },
-    {
-      id: "2",
-      name: "Xhunt",
-      description: "Chrome扩展，帮助发现和跟踪区块链项目的融资动态",
-      url: "https://chromewebstore.google.com/detail/gonmfafjcdkngkbhcpmcphlgfhabkeji",
-      tags: ["Chrome扩展", "融资", "跟踪"],
-      customLogo: "/logos/xhunt.png",
-    },
-    {
-      id: "3",
-      name: "OmniCrypto",
-      description: "需要邀请码",
-      url: "https://chromewebstore.google.com/detail/anfhckfacchppnodiocnmhcjdgbhahmd",
-      tags: ["投资", "邀请制", "Chrome扩展"],
-      customLogo: "/logos/omnicrypto.jpeg",
-    },
-  ],
-  tradingData: [
-    {
-      id: "17",
-      name: "Coinglass",
-      description: "合约数据分析",
-      url: "https://www.coinglass.com/zh",
-      tags: ["合约", "数据分析", "期货"],
-      customLogo: "/logos/coinglass.png",
-    },
-    {
-      id: "18",
-      name: "Binance Futures",
-      description: "币安合约数据",
-      url: "https://www.binance.com/zh-CN/futures/funding-history/perpetual/trading-data",
-      tags: ["币安", "合约", "交易数据"],
-      customLogo: "/logos/binance.jpeg",
-    },
-    {
-      id: "19",
-      name: "CoinMarketCap",
-      description: "数字货币行情分析",
-      url: "https://coinmarketcap.com/zh/",
-      tags: ["行情", "分析", "市值"],
-      customLogo: "/logos/coinmarketcap.png",
-    },
-    {
-      id: "20",
-      name: "Tokenomist",
-      description: "代币解锁等",
-      url: "https://tokenomist.ai/",
-      tags: ["代币", "解锁", "分析"],
-      customLogo: "/logos/tokenomist.png",
-    },
-    {
-      id: "21",
-      name: "DefiLlama",
-      description: "羊驼，查defi相关数据",
-      url: "https://defillama.com/",
-      tags: ["DeFi", "数据", "TVL"],
-      customLogo: "/logos/defillama.jpeg",
-    },
-  ],
-  faucet: [
-    {
-      id: "4",
-      name: "Faucet Link",
-      description: "Goerli测试网络水龙头，免费获取测试ETH",
-      url: "https://faucetlink.to/",
-      tags: ["Goerli", "ETH", "测试网"],
-      customLogo: "/logos/faucet-link.png",
-    },
-    {
-      id: "5",
-      name: "QuickNode Goerli",
-      description: "QuickNode提供的Goerli测试网ETH水龙头",
-      url: "https://faucet.quicknode.com/ethereum/goerli",
-      tags: ["Goerli", "ETH", "QuickNode"],
-      customLogo: "/logos/quicknode.png",
-    },
-    {
-      id: "6",
-      name: "Paradigm Faucet",
-      description: "Paradigm提供的以太坊测试网水龙头",
-      url: "https://faucet.paradigm.xyz/",
-      tags: ["ETH", "测试网", "Paradigm"],
-      customLogo: "/logos/paradigm-faucet.png",
-    },
-    {
-      id: "7",
-      name: "Alchemy Sepolia",
-      description: "Alchemy提供的Sepolia测试网ETH水龙头",
-      url: "https://www.alchemy.com/faucets/ethereum-sepolia",
-      tags: ["Sepolia", "ETH", "Alchemy"],
-      customLogo: "/logos/alchemy.png",
-    },
-    {
-      id: "8",
-      name: "BNB Chain Testnet",
-      description: "BNB智能链测试网水龙头，获取测试BNB",
-      url: "https://faucets.chain.link/bnb-chain-testnet",
-      tags: ["BNB", "测试网", "BSC"],
-      customLogo: "/logos/bnb-testnet.jpeg",
-    },
-    {
-      id: "9",
-      name: "Sui Faucet",
-      description: "Sui区块链测试网水龙头",
-      url: "https://faucet.blockbolt.io/",
-      tags: ["Sui", "测试网"],
-      customLogo: "/logos/sui.jpeg",
-    },
-    {
-      id: "10",
-      name: "Bitcoin Testnet",
-      description: "比特币测试网水龙头，获取测试BTC",
-      url: "https://faucet.opnet.org/",
-      tags: ["Bitcoin", "测试网", "BTC"],
-      customLogo: "/logos/bitcoin-testnet.png",
-    },
-    {
-      id: "11",
-      name: "Solana Faucet",
-      description: "Solana测试网水龙头，获取测试SOL",
-      url: "https://solfaucet.com/",
-      tags: ["Solana", "SOL", "测试网"],
-      customLogo: "/logos/solana.jpg",
-    },
-    {
-      id: "12",
-      name: "OKX领水中心",
-      description: "OKX提供的多链测试网水龙头服务",
-      url: "https://web3.okx.com/zh-hans/faucet",
-      tags: ["多链", "OKX", "测试网"],
-      customLogo: "/logos/okx-faucet.png",
-    },
-  ],
-  airdrop: [
-    {
-      id: "13",
-      name: "鱼泡泡空投网站",
-      description: "专业的空投信息聚合平台，及时获取最新空投机会",
-      url: "https://www.airdrop-yupaopao.xyz/",
-      tags: ["空投", "聚合", "机会"],
-      customLogo: "/logos/yupaopao-airdrop.png",
-    },
-  ],
-  tutorial: [
-    {
-      id: "14",
-      name: "Web3小白教程",
-      description: "最全入门指南，created by 柴郡 https://x.com/0xCheshire",
-      url: "https://pale-blackberry-88c.notion.site/17bf1b18f5d380598595d5306f6540f9",
-      tags: ["教程", "Web3", "新手"],
-      customLogo: "/logos/notion-tutorial.png",
-    },
-  ],
-  exchange: [
-    {
-      id: "15",
-      name: "Binance币安",
-      description: "全球最大的加密货币交易所，通过我的邀请链接注册享受最高40%手续费优惠",
-      url: "https://www.marketwebb.systems/join?ref=865223788",
-      tags: ["交易所", "Binance", "邀请"],
-      customLogo: "/logos/binance.jpeg",
-    },
-    {
-      id: "16",
-      name: "OKX欧易",
-      description: "知名加密货币交易平台，支持现货、合约、期权交易",
-      url: "https://okx.com/join/46997457",
-      tags: ["交易所", "OKX", "邀请"],
-      customLogo: "/logos/okx-exchange.png",
-    },
-  ],
+  funding: [],
+  tradingData: [],
+  faucet: [],
+  airdrop: [],
+  tutorial: [],
+  exchange: [],
+}
+
+// 从API获取数据的函数
+export async function fetchWebsiteData(): Promise<Record<string, Website[]>> {
+  try {
+    const response = await fetch("/api/websites")
+    if (!response.ok) {
+      throw new Error("获取数据失败")
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("获取网站数据失败:", error)
+    return websiteData // 返回默认数据
+  }
 }

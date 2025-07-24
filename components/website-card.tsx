@@ -1,91 +1,129 @@
 "use client"
 
+import type React from "react"
+
+import { useState } from "react"
 import { motion } from "framer-motion"
-import { ExternalLink } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { ExternalLink, Copy, Check } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getFaviconUrl } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
 import type { Website } from "@/lib/types"
 
 interface WebsiteCardProps {
-  site: Website
+  website: Website
 }
 
-export function WebsiteCard({ site }: WebsiteCardProps) {
-  // 优先使用自定义logo，否则使用favicon
-  const logoUrl = site.customLogo || getFaviconUrl(site.url)
+export function WebsiteCard({ website }: WebsiteCardProps) {
+  const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    try {
+      await navigator.clipboard.writeText(website.url)
+      setCopied(true)
+      toast({
+        title: "链接已复制",
+        description: "网站链接已复制到剪贴板",
+      })
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      toast({
+        title: "复制失败",
+        description: "无法复制链接到剪贴板",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleVisit = () => {
+    window.open(website.url, "_blank", "noopener,noreferrer")
+  }
 
   return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="h-full"
-    >
-      <Card className="h-full bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col">
-        <CardHeader className="pb-3 flex-shrink-0 p-4 md:p-6">
+    <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ duration: 0.2 }} className="h-full">
+      <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
-            <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.5 }} className="flex-shrink-0">
-              <Image
-                src={logoUrl || "/placeholder.svg"}
-                alt={`${site.name} logo`}
-                width={32}
-                height={32}
-                className="rounded-lg shadow-sm object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = "/placeholder.svg?height=32&width=32&text=🌐"
-                }}
-              />
+            {/* 网站Logo - 保留旋转效果 */}
+            <motion.div
+              whileHover={{ rotate: 360 }}
+              transition={{ duration: 0.5 }}
+              className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border border-slate-200 dark:border-slate-600"
+            >
+              {website.customLogo ? (
+                <img
+                  src={website.customLogo || "/placeholder.svg"}
+                  alt={website.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = "none"
+                    target.nextElementSibling?.classList.remove("hidden")
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center ${website.customLogo ? "hidden" : ""}`}>
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600"></div>
+              </div>
             </motion.div>
+
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base md:text-lg text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {site.name}
-              </h3>
-              {site.tags && site.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {site.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                      {tag}
-                    </Badge>
-                  ))}
-                  {site.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                      +{site.tags.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              )}
+              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+                {website.name}
+              </CardTitle>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                {website.description}
+              </p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="pb-4 flex-1 flex flex-col p-4 md:p-6 pt-0">
-          <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed flex-1">
-            {site.description}
-          </p>
-        </CardContent>
+        <CardContent className="pt-0">
+          {/* 标签 */}
+          {website.tags && website.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {website.tags.slice(0, 3).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  {tag}
+                </Badge>
+              ))}
+              {website.tags.length > 3 && (
+                <Badge variant="secondary" className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700">
+                  +{website.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
 
-        <CardFooter className="pt-0 flex-shrink-0 p-4 md:p-6">
-          <Link href={site.url} target="_blank" rel="noopener noreferrer" className="w-full">
+          {/* 操作按钮 - 只有这里有手型光标 */}
+          <div className="flex gap-2">
             <Button
-              className="w-full group/btn bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300 py-3 text-sm md:text-base"
-              size="default"
+              onClick={handleVisit}
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
+              size="sm"
             >
-              <span className="mr-2">访问网站</span>
-              <ExternalLink className="h-4 w-4 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform duration-200" />
+              <ExternalLink className="w-4 h-4 mr-2" />
+              访问
             </Button>
-          </Link>
-        </CardFooter>
-
-        {/* 悬浮效果装饰 */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-          initial={false}
-        />
+            <Button
+              onClick={handleCopy}
+              variant="outline"
+              size="sm"
+              className="px-3 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors bg-transparent cursor-pointer"
+            >
+              {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </motion.div>
   )

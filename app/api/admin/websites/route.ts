@@ -1,49 +1,32 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { checkAuth } from "@/lib/auth"
+import { NextResponse } from "next/server"
+import { getAllWebsites, createWebsite } from "@/lib/database"
 
 export async function GET() {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
-    return NextResponse.json({ error: "未授权" }, { status: 401 })
-  }
-
-  // 这里应该从数据库获取数据，现在返回模拟数据
-  return NextResponse.json({ websites: [] })
-}
-
-export async function POST(request: NextRequest) {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
-    return NextResponse.json({ error: "未授权" }, { status: 401 })
-  }
-
   try {
-    const data = await request.json()
-
-    // 这里应该保存到数据库
-    // 现在只是模拟成功响应
-    console.log("添加网站:", data)
-
-    return NextResponse.json({ success: true, id: Date.now().toString() })
+    const websites = await getAllWebsites()
+    return NextResponse.json(websites)
   } catch (error) {
-    return NextResponse.json({ error: "添加失败" }, { status: 500 })
+    console.error("获取网站数据失败:", error)
+    return NextResponse.json({ error: "获取数据失败" }, { status: 500 })
   }
 }
 
-export async function PUT(request: NextRequest) {
-  const isAuthenticated = await checkAuth()
-  if (!isAuthenticated) {
-    return NextResponse.json({ error: "未授权" }, { status: 401 })
-  }
-
+export async function POST(request: Request) {
   try {
     const data = await request.json()
 
-    // 这里应该更新数据库
-    console.log("更新网站:", data)
+    const website = await createWebsite({
+      name: data.name,
+      description: data.description,
+      url: data.url,
+      tags: data.tags || [],
+      customLogo: data.customLogo,
+      section: data.section,
+    })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json(website)
   } catch (error) {
-    return NextResponse.json({ error: "更新失败" }, { status: 500 })
+    console.error("创建网站失败:", error)
+    return NextResponse.json({ error: "创建失败" }, { status: 500 })
   }
 }
