@@ -92,7 +92,7 @@ export function NavigationSections() {
               <span className="text-sm text-slate-500 dark:text-slate-400">{sites.length} 个</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 auto-rows-fr">
               {sites.map((site, index) => (
                 <motion.div
                   key={site.id}

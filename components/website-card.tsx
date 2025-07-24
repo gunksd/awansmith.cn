@@ -46,8 +46,8 @@ export function WebsiteCard({ website }: WebsiteCardProps) {
 
   return (
     <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ duration: 0.2 }} className="h-full">
-      <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-        <CardHeader className="pb-3">
+      <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col">
+        <CardHeader className="pb-3 flex-shrink-0">
           <div className="flex items-start gap-3">
             {/* 网站Logo - 保留旋转效果 */}
             <motion.div
@@ -73,46 +73,50 @@ export function WebsiteCard({ website }: WebsiteCardProps) {
             </motion.div>
 
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+              <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
                 {website.name}
               </CardTitle>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
                 {website.description}
               </p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0">
-          {/* 标签 */}
-          {website.tags && website.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {website.tags.slice(0, 3).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  {tag}
-                </Badge>
-              ))}
-              {website.tags.length > 3 && (
-                <Badge variant="secondary" className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700">
-                  +{website.tags.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
+        <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+          {/* 标签区域 - 固定高度 */}
+          <div className="mb-4">
+            {website.tags && website.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                {website.tags.slice(0, 3).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+                {website.tags.length > 3 && (
+                  <Badge variant="secondary" className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700">
+                    +{website.tags.length - 3}
+                  </Badge>
+                )}
+              </div>
+            ) : (
+              <div className="min-h-[28px]"></div>
+            )}
+          </div>
 
-          {/* 操作按钮 - 只有这里有手型光标 */}
-          <div className="flex gap-2">
+          {/* 操作按钮 - 固定在底部 */}
+          <div className="flex gap-2 mt-auto">
             <Button
               onClick={handleVisit}
               className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer"
               size="sm"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              访问
+              访问网站
             </Button>
             <Button
               onClick={handleCopy}
