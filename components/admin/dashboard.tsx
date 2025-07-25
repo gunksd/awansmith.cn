@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Upload, X, Settings } from "lucide-react"
+import { Plus, Edit, Trash2, Upload, X, Settings, ChevronUp, ChevronDown } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -305,6 +305,54 @@ export function AdminDashboard() {
     }
   }
 
+  // 调整分区顺序
+  const handleMoveSectionOrder = async (sectionId: number, direction: "up" | "down") => {
+    const currentSection = sections.find((s) => s.id === sectionId)
+    if (!currentSection) return
+
+    const sortedSections = [...sections].sort((a, b) => a.sort_order - b.sort_order)
+    const currentIndex = sortedSections.findIndex((s) => s.id === sectionId)
+
+    if (direction === "up" && currentIndex === 0) return
+    if (direction === "down" && currentIndex === sortedSections.length - 1) return
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    const targetSection = sortedSections[targetIndex]
+
+    try {
+      // 交换排序值
+      const updateData = [
+        { id: currentSection.id, sortOrder: targetSection.sort_order },
+        { id: targetSection.id, sortOrder: currentSection.sort_order },
+      ]
+
+      const response = await fetch("/api/admin/sections/order", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sections: updateData }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "排序更新成功",
+          description: `分区 "${currentSection.title}" 已${direction === "up" ? "上移" : "下移"}`,
+        })
+        loadData()
+      } else {
+        throw new Error("更新排序失败")
+      }
+    } catch (error) {
+      console.error("更新排序失败:", error)
+      toast({
+        title: "更新失败",
+        description: "请检查网络连接后重试",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -373,6 +421,21 @@ export function AdminDashboard() {
     return section ? `${section.icon} ${section.title}` : sectionKey
   }
 
+  // 按分区组织网站数据
+  const getWebsitesBySection = () => {
+    const sortedSections = [...sections].sort((a, b) => a.sort_order - b.sort_order)
+    const websitesBySection: Record<string, { section: Section; websites: Website[] }> = {}
+
+    sortedSections.forEach((section) => {
+      websitesBySection[section.key] = {
+        section,
+        websites: websites.filter((website) => website.section === section.key),
+      }
+    })
+
+    return websitesBySection
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -380,6 +443,8 @@ export function AdminDashboard() {
       </div>
     )
   }
+
+  const websitesBySection = getWebsitesBySection()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
@@ -408,7 +473,7 @@ export function AdminDashboard() {
           </div>
 
           {/* 网站管理 */}
-          <TabsContent value="websites" className="space-y-6">
+          <TabsContent value="websites" className="space-y-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -570,87 +635,110 @@ export function AdminDashboard() {
               </Dialog>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {websites.map((website, index) => (
+            {/* 按分区显示网站 */}
+            <div className="space-y-8">
+              {Object.entries(websitesBySection).map(([sectionKey, { section, websites: sectionWebsites }]) => (
                 <motion.div
-                  key={website.id}
+                  key={sectionKey}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  className="h-full"
+                  className="space-y-4"
                 >
-                  <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{section.icon}</div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">{section.title}</h3>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600"></div>
+                    <Badge variant="secondary" className="text-sm">
+                      {sectionWebsites.length} 个网站
+                    </Badge>
+                  </div>
+
+                  {sectionWebsites.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {sectionWebsites.map((website, index) => (
                         <motion.div
-                          whileHover={{ rotate: 360 }}
-                          transition={{ duration: 0.5 }}
-                          className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border border-slate-200 dark:border-slate-600"
+                          key={website.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ y: -4, scale: 1.02 }}
+                          className="h-full"
                         >
-                          {website.custom_logo ? (
-                            <img
-                              src={website.custom_logo || "/placeholder.svg"}
-                              alt={website.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400">
-                              <Upload className="w-6 h-6" />
-                            </div>
-                          )}
+                          <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start gap-3">
+                                <motion.div
+                                  whileHover={{ rotate: 360 }}
+                                  transition={{ duration: 0.5 }}
+                                  className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border border-slate-200 dark:border-slate-600"
+                                >
+                                  {website.custom_logo ? (
+                                    <img
+                                      src={website.custom_logo || "/placeholder.svg"}
+                                      alt={website.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                      <Upload className="w-6 h-6" />
+                                    </div>
+                                  )}
+                                </motion.div>
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
+                                    {website.name}
+                                  </CardTitle>
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-2">
+                                    {website.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent className="space-y-4">
+                              <div className="flex flex-wrap gap-1.5">
+                                {website.tags.map((tag) => (
+                                  <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(website)}
+                                  className="flex-1 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30"
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  编辑
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(website.id, website.name)}
+                                  className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
                         </motion.div>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
-                            {website.name}
-                          </CardTitle>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-2">
-                            {website.description}
-                          </p>
-                          <Badge
-                            variant="secondary"
-                            className="text-xs bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-300 border-0"
-                          >
-                            {getSectionTitle(website.section)}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {website.tags.map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="secondary"
-                            className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          >
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(website)}
-                          className="flex-1 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          编辑
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(website.id, website.name)}
-                          className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl border border-slate-200 dark:border-slate-700">
+                      <p className="text-slate-500 dark:text-slate-400">该分区暂无网站</p>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -755,80 +843,105 @@ export function AdminDashboard() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sections.map((section, index) => (
-                <motion.div
-                  key={section.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                >
-                  <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <motion.div
-                          whileHover={{ scale: 1.2, rotate: 360 }}
-                          transition={{ duration: 0.3 }}
-                          className="text-3xl p-2 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-xl"
-                        >
-                          {section.icon}
-                        </motion.div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {section.title}
-                          </CardTitle>
-                          <div className="space-y-1 mt-2">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              <span className="font-medium">标识:</span> {section.key}
-                            </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              <span className="font-medium">排序:</span> {section.sort_order}
-                            </p>
+              {sections
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((section, index) => (
+                  <motion.div
+                    key={section.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                  >
+                    <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            whileHover={{ scale: 1.2, rotate: 360 }}
+                            transition={{ duration: 0.3 }}
+                            className="text-3xl p-2 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-xl"
+                          >
+                            {section.icon}
+                          </motion.div>
+                          <div className="flex-1">
+                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {section.title}
+                            </CardTitle>
+                            <div className="space-y-1 mt-2">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                <span className="font-medium">标识:</span> {section.key}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                <span className="font-medium">排序:</span> {section.sort_order}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge
+                              variant={section.is_active ? "default" : "secondary"}
+                              className={
+                                section.is_active
+                                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-0"
+                                  : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                              }
+                            >
+                              {section.is_active ? "启用" : "禁用"}
+                            </Badge>
+                            <Switch
+                              checked={section.is_active}
+                              onCheckedChange={(checked) => handleToggleSection(section.id, checked)}
+                              className="scale-75"
+                            />
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge
-                            variant={section.is_active ? "default" : "secondary"}
-                            className={
-                              section.is_active
-                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-0"
-                                : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                            }
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* 排序控制按钮 */}
+                        <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                          <span className="text-xs text-slate-600 dark:text-slate-400 flex-1">调整顺序:</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMoveSectionOrder(section.id, "up")}
+                            disabled={index === 0}
+                            className="h-7 w-7 p-0"
                           >
-                            {section.is_active ? "启用" : "禁用"}
-                          </Badge>
-                          <Switch
-                            checked={section.is_active}
-                            onCheckedChange={(checked) => handleToggleSection(section.id, checked)}
-                            className="scale-75"
-                          />
+                            <ChevronUp className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMoveSectionOrder(section.id, "down")}
+                            disabled={index === sections.length - 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </Button>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditSection(section)}
-                          className="flex-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          编辑
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteSection(section.id, section.title)}
-                          className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditSection(section)}
+                            className="flex-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            编辑
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteSection(section.id, section.title)}
+                            className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
             </div>
 
             {sections.length === 0 && (
