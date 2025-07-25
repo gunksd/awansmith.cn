@@ -7,31 +7,29 @@ import type { Website } from "@/lib/types"
 
 export function NavigationSections() {
   const [websiteData, setWebsiteData] = useState<Record<string, Website[]>>({})
+  const [sectionTitles, setSectionTitles] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const sectionTitles = {
-    funding: "🚀 融资信息",
-    tradingData: "📊 交易数据工具",
-    faucet: "💧 领水网站",
-    airdrop: "🎁 空投网站",
-    tutorial: "📚 小白教程",
-    exchange: "💱 交易所邀请",
-  }
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
-        const response = await fetch("/api/websites")
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+        // 并行获取网站数据和分区信息
+        const [websitesResponse, sectionsResponse] = await Promise.all([fetch("/api/websites"), fetch("/api/sections")])
+
+        if (!websitesResponse.ok || !sectionsResponse.ok) {
+          throw new Error("获取数据失败")
         }
 
-        const data = await response.json()
-        console.log("获取到的数据:", data) // 调试日志
-        setWebsiteData(data)
+        const [websites, sections] = await Promise.all([websitesResponse.json(), sectionsResponse.json()])
+
+        console.log("获取到的网站数据:", websites)
+        console.log("获取到的分区数据:", sections)
+
+        setWebsiteData(websites)
+        setSectionTitles(sections)
         setError(null)
       } catch (error) {
         console.error("加载数据失败:", error)

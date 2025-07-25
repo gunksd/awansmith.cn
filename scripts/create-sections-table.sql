@@ -1,25 +1,29 @@
--- 创建分区表
+-- 创建分区管理表
 CREATE TABLE IF NOT EXISTS sections (
-  key VARCHAR(50) PRIMARY KEY,
-  title VARCHAR(100) NOT NULL,
-  emoji VARCHAR(10) NOT NULL,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(50) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    icon VARCHAR(10) DEFAULT '📁',
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 初始化默认分区数据
-INSERT INTO sections (key, title, emoji, display_order) VALUES
-('funding', '融资信息', '🚀', 1),
-('tradingData', '交易数据工具', '📊', 2),
-('faucet', '领水网站', '💧', 3),
-('airdrop', '空投网站', '🎁', 4),
-('tutorial', '小白教程', '📚', 5),
-('exchange', '交易所邀请', '💱', 6)
-ON CONFLICT (key) DO NOTHING;
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_sections_sort_order ON sections(sort_order);
+CREATE INDEX IF NOT EXISTS idx_sections_is_active ON sections(is_active);
 
--- 确保websites表的section字段是外键
-ALTER TABLE websites ADD CONSTRAINT fk_website_section
-  FOREIGN KEY (section) REFERENCES sections(key)
-  ON DELETE RESTRICT
-  ON UPDATE CASCADE;
+-- 插入默认分区数据
+INSERT INTO sections (key, title, icon, sort_order, is_active) VALUES
+('funding', '融资信息', '🚀', 1, true),
+('tradingData', '交易数据工具', '📊', 2, true),
+('faucet', '领水网站', '💧', 3, true),
+('airdrop', '空投网站', '🎁', 4, true),
+('tutorial', '小白教程', '📚', 5, true),
+('exchange', '交易所邀请', '💱', 6, true)
+ON CONFLICT (key) DO UPDATE SET
+    title = EXCLUDED.title,
+    icon = EXCLUDED.icon,
+    sort_order = EXCLUDED.sort_order,
+    is_active = EXCLUDED.is_active;
