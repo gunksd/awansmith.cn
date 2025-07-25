@@ -7,7 +7,7 @@ export const size = {
 }
 export const contentType = "image/png"
 
-// 生成旋转的比特币苹果图标
+// 生成旋转的💸苹果图标
 export default function AppleIcon() {
   return new ImageResponse(
     <div
@@ -27,26 +27,26 @@ export default function AppleIcon() {
           width: "180px",
           height: "180px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(247,147,26,0.3) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(16,185,129,0.3) 0%, transparent 70%)",
           position: "absolute",
           animation: "pulse 2s ease-in-out infinite",
         }}
       />
 
-      {/* 主要比特币图标 */}
+      {/* 主要背景圆圈 */}
       <div
         style={{
           width: "160px",
           height: "160px",
           borderRadius: "50%",
-          background: "linear-gradient(135deg, #f7931a 0%, #ffb347 50%, #d4af37 100%)",
+          background: "linear-gradient(135deg, #10b981 0%, #34d399 50%, #059669 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 8px 32px rgba(247,147,26,0.4), inset 0 2px 8px rgba(255,255,255,0.3)",
-          border: "4px solid #d4af37",
+          boxShadow: "0 8px 32px rgba(16,185,129,0.4), inset 0 2px 8px rgba(255,255,255,0.3)",
+          border: "4px solid #059669",
           position: "relative",
-          animation: "rotate 4s linear infinite",
+          animation: "rotate 3s linear infinite",
         }}
       >
         {/* 内层光泽效果 */}
@@ -63,20 +63,17 @@ export default function AppleIcon() {
           }}
         />
 
-        {/* 比特币符号 */}
+        {/* 💸表情 */}
         <div
           style={{
-            fontSize: "80px",
-            fontWeight: "bold",
-            color: "white",
-            textShadow: "0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)",
-            fontFamily: "Arial, sans-serif",
+            fontSize: "100px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            animation: "counter-rotate 3s linear infinite",
           }}
         >
-          ₿
+          💸
         </div>
       </div>
 
@@ -86,6 +83,10 @@ export default function AppleIcon() {
           @keyframes rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @keyframes counter-rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
           }
           @keyframes pulse {
             0%, 100% { opacity: 0.5; transform: scale(1); }

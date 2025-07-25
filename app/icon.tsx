@@ -7,7 +7,7 @@ export const size = {
 }
 export const contentType = "image/png"
 
-// 生成旋转的比特币图标
+// 生成旋转的💸图标
 export default function Icon() {
   return new ImageResponse(
     <div
@@ -22,32 +22,33 @@ export default function Icon() {
         position: "relative",
       }}
     >
-      {/* 外层旋转圆圈 */}
+      {/* 外层旋转圆圈背景 */}
       <div
         style={{
           width: "32px",
           height: "32px",
           borderRadius: "50%",
-          background: "linear-gradient(45deg, #f7931a, #ffb347)",
+          background: "linear-gradient(45deg, #10b981, #34d399)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          border: "2px solid #d4af37",
-          animation: "spin 3s linear infinite",
+          border: "2px solid #059669",
+          animation: "spin 2s linear infinite",
+          boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
         }}
       >
-        {/* 比特币符号 */}
+        {/* 💸表情 */}
         <div
           style={{
-            fontSize: "18px",
-            fontWeight: "bold",
-            color: "white",
-            textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-            fontFamily: "Arial, sans-serif",
+            fontSize: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "counter-spin 2s linear infinite",
           }}
         >
-          ₿
+          💸
         </div>
       </div>
 
@@ -57,6 +58,10 @@ export default function Icon() {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @keyframes counter-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
           }
         `}
       </style>
