@@ -39,6 +39,42 @@ interface Section {
   updated_at: string
 }
 
+// 美观的加载动画组件
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="relative">
+      {/* 外圈旋转动画 */}
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-blue-800"></div>
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
+
+      {/* 中心SVG图标 */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+          className="text-blue-600 dark:text-blue-400"
+        >
+          <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor" />
+          <motion.path
+            d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          />
+        </motion.svg>
+      </div>
+    </div>
+  </div>
+)
+
 export function AdminDashboard() {
   const [websites, setWebsites] = useState<Website[]>([])
   const [sections, setSections] = useState<Section[]>([])
@@ -130,6 +166,20 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        const responseData = await response.json()
+
+        if (editingWebsite) {
+          // 编辑模式：更新本地状态中的网站数据
+          setWebsites((prevWebsites) =>
+            prevWebsites.map((website) =>
+              website.id === editingWebsite.id ? { ...website, ...submitData, tags: submitData.tags } : website,
+            ),
+          )
+        } else {
+          // 新增模式：添加新网站到本地状态
+          setWebsites((prevWebsites) => [...prevWebsites, responseData])
+        }
+
         toast({
           title: editingWebsite ? "更新成功" : "创建成功",
           description: `网站 ${formData.name} ${editingWebsite ? "已更新" : "已创建"}`,
@@ -137,7 +187,6 @@ export function AdminDashboard() {
 
         setDialogOpen(false)
         resetForm()
-        loadData()
       } else {
         throw new Error("操作失败")
       }
@@ -176,6 +225,20 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        const responseData = await response.json()
+
+        if (editingSection) {
+          // 编辑模式：更新本地状态中的分区数据
+          setSections((prevSections) =>
+            prevSections.map((section) =>
+              section.id === editingSection.id ? { ...section, ...sectionFormData } : section,
+            ),
+          )
+        } else {
+          // 新增模式：添加新分区到本地状态
+          setSections((prevSections) => [...prevSections, responseData])
+        }
+
         toast({
           title: editingSection ? "更新成功" : "创建成功",
           description: `分区 ${sectionFormData.title} ${editingSection ? "已更新" : "已创建"}`,
@@ -183,7 +246,6 @@ export function AdminDashboard() {
 
         setSectionDialogOpen(false)
         resetSectionForm()
-        loadData()
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "操作失败")
@@ -222,6 +284,7 @@ export function AdminDashboard() {
     setSectionDialogOpen(true)
   }
 
+  // 优化的删除网站功能 - 不重新加载整个页面
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`确定要删除网站 "${name}" 吗？`)) return
 
@@ -231,11 +294,13 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        // 只从本地状态中移除该网站，不重新加载整个页面
+        setWebsites((prevWebsites) => prevWebsites.filter((website) => website.id !== id))
+
         toast({
           title: "删除成功",
           description: `网站 ${name} 已删除`,
         })
-        loadData()
       } else {
         throw new Error("删除失败")
       }
@@ -258,11 +323,13 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        // 只从本地状态中移除该分区，不重新加载整个页面
+        setSections((prevSections) => prevSections.filter((section) => section.id !== id))
+
         toast({
           title: "删除成功",
           description: `分区 ${title} 已删除`,
         })
-        loadData()
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "删除失败")
@@ -472,11 +539,7 @@ export function AdminDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const websitesBySection = getWebsitesBySection()
@@ -701,8 +764,8 @@ export function AdminDashboard() {
                           whileHover={{ y: -4, scale: 1.02 }}
                           className="h-full"
                         >
-                          <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-                            <CardHeader className="pb-3">
+                          <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col">
+                            <CardHeader className="pb-3 flex-shrink-0">
                               <div className="flex items-start gap-3">
                                 <motion.div
                                   whileHover={{ rotate: 360 }}
@@ -725,14 +788,14 @@ export function AdminDashboard() {
                                   <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
                                     {website.name}
                                   </CardTitle>
-                                  <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-2">
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                                     {website.description}
                                   </p>
                                 </div>
                               </div>
                             </CardHeader>
 
-                            <CardContent className="space-y-4">
+                            <CardContent className="flex-1 flex flex-col justify-between space-y-4">
                               <div className="flex flex-wrap gap-1.5">
                                 {website.tags.map((tag) => (
                                   <Badge
@@ -745,7 +808,8 @@ export function AdminDashboard() {
                                 ))}
                               </div>
 
-                              <div className="flex gap-2">
+                              {/* 按钮区域 - 使用 mt-auto 确保始终在底部对齐 */}
+                              <div className="flex gap-2 mt-auto">
                                 <Button
                                   variant="outline"
                                   size="sm"
