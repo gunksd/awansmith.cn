@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
 import { Sidebar } from "@/components/sidebar"
 import { SidebarProvider } from "@/components/sidebar-context"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -62,7 +60,6 @@ function Logo() {
 }
 
 export default function HomePage() {
-  const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -128,20 +125,6 @@ export default function HomePage() {
                 {/* Logo区域 */}
                 <Logo />
 
-                {/* 搜索栏 */}
-                <div className="flex-1 max-w-md mx-8">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                    <Input
-                      type="text"
-                      placeholder="搜索资源..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-slate-700/50 focus:bg-white dark:focus:bg-slate-800 transition-colors"
-                    />
-                  </div>
-                </div>
-
                 {/* 右侧操作区 */}
                 <div className="flex items-center gap-2">
                   <ThemeToggle />
@@ -152,7 +135,7 @@ export default function HomePage() {
 
           {/* 主要内容区域 */}
           <div className="px-4 sm:px-6 lg:px-8 py-8">
-            <NavigationSections searchTerm={searchTerm} />
+            <NavigationSections />
           </div>
         </main>
       </div>

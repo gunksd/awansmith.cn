@@ -1,54 +1,66 @@
 import { ImageResponse } from "next/og"
 
-// 图标配置
+export const runtime = "edge"
+
 export const size = {
   width: 32,
   height: 32,
 }
+
 export const contentType = "image/png"
 
-// 生成旋转的💸图标
 export default function Icon() {
   return new ImageResponse(
     <div
       style={{
-        fontSize: 24,
-        background: "linear-gradient(135deg, #fb923c 0%, #dc2626 100%)",
+        background: "linear-gradient(135deg, #fb923c 0%, #dc2626 50%, #ec4899 100%)",
         width: "100%",
         height: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        position: "relative",
         borderRadius: "50%",
         border: "2px solid #f97316",
-        boxShadow: "0 0 20px rgba(251, 146, 60, 0.5)",
+        position: "relative",
       }}
     >
+      {/* 内层光泽效果 */}
+      <div
+        style={{
+          position: "absolute",
+          top: "4px",
+          left: "4px",
+          right: "4px",
+          bottom: "4px",
+          background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 50%)",
+          borderRadius: "50%",
+        }}
+      />
+
       {/* 💸表情 */}
       <div
         style={{
           fontSize: "18px",
+          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-          zIndex: 1,
         }}
       >
         💸
       </div>
 
-      {/* 内层光泽 */}
+      {/* 底部阴影 */}
       <div
         style={{
           position: "absolute",
-          top: "20%",
-          left: "20%",
-          width: "60%",
-          height: "60%",
-          background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent)",
+          bottom: "-2px",
+          left: "2px",
+          right: "2px",
+          height: "4px",
+          background: "rgba(0,0,0,0.2)",
           borderRadius: "50%",
+          filter: "blur(2px)",
         }}
       />
     </div>,
