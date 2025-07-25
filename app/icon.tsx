@@ -1,33 +1,31 @@
-"use client"
-
 import { ImageResponse } from "next/og"
 
-export const runtime = "edge"
-
+// 图标配置
 export const size = {
   width: 32,
   height: 32,
 }
-
 export const contentType = "image/png"
 
+// 生成旋转的💸图标
 export default function Icon() {
   return new ImageResponse(
     <div
       style={{
+        fontSize: 24,
         background: "linear-gradient(135deg, #fb923c 0%, #dc2626 100%)",
         width: "100%",
         height: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        position: "relative",
         borderRadius: "50%",
         border: "2px solid #f97316",
         boxShadow: "0 0 20px rgba(251, 146, 60, 0.5)",
-        position: "relative",
       }}
     >
-      {/* 旋转动画背景 */}
+      {/* 旋转背景效果 */}
       <div
         style={{
           position: "absolute",
@@ -47,7 +45,7 @@ export default function Icon() {
           alignItems: "center",
           justifyContent: "center",
           textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-          animation: "spin-reverse 3s linear infinite",
+          animation: "counter-spin 3s linear infinite",
           zIndex: 1,
         }}
       >
@@ -64,20 +62,22 @@ export default function Icon() {
           height: "60%",
           background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent)",
           borderRadius: "50%",
-          pointerEvents: "none",
         }}
       />
 
-      <style jsx>{`
+      {/* CSS动画定义 */}
+      <style>
+        {`
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          @keyframes spin-reverse {
+          @keyframes counter-spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(-360deg); }
           }
-        `}</style>
+        `}
+      </style>
     </div>,
     {
       ...size,

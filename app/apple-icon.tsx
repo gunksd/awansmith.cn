@@ -1,30 +1,28 @@
-"use client"
-
 import { ImageResponse } from "next/og"
 
-export const runtime = "edge"
-
+// 苹果图标配置
 export const size = {
   width: 180,
   height: 180,
 }
-
 export const contentType = "image/png"
 
+// 生成旋转的💸苹果图标
 export default function AppleIcon() {
   return new ImageResponse(
     <div
       style={{
+        fontSize: 48,
         background: "linear-gradient(135deg, #fb923c 0%, #dc2626 50%, #be185d 100%)",
         width: "100%",
         height: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        position: "relative",
         borderRadius: "20%",
         border: "4px solid #f97316",
         boxShadow: "0 0 40px rgba(251, 146, 60, 0.6), inset 0 0 20px rgba(255,255,255,0.1)",
-        position: "relative",
       }}
     >
       {/* 外层发光效果 */}
@@ -39,7 +37,7 @@ export default function AppleIcon() {
         }}
       />
 
-      {/* 旋转动画背景 */}
+      {/* 旋转背景效果 */}
       <div
         style={{
           position: "absolute",
@@ -60,7 +58,7 @@ export default function AppleIcon() {
           alignItems: "center",
           justifyContent: "center",
           textShadow: "0 4px 8px rgba(0,0,0,0.3)",
-          animation: "spin-reverse 3s linear infinite",
+          animation: "counter-spin 3s linear infinite",
           zIndex: 2,
         }}
       >
@@ -78,7 +76,6 @@ export default function AppleIcon() {
           background:
             "radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.4), rgba(255,255,255,0.1) 50%, transparent)",
           borderRadius: "20%",
-          pointerEvents: "none",
           zIndex: 1,
         }}
       />
@@ -96,12 +93,14 @@ export default function AppleIcon() {
         }}
       />
 
-      <style jsx>{`
+      {/* CSS动画定义 */}
+      <style>
+        {`
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          @keyframes spin-reverse {
+          @keyframes counter-spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(-360deg); }
           }
@@ -109,7 +108,8 @@ export default function AppleIcon() {
             0%, 100% { opacity: 0.6; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.05); }
           }
-        `}</style>
+        `}
+      </style>
     </div>,
     {
       ...size,
