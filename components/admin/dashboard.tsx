@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Upload, X } from "lucide-react"
+import { Plus, Edit, Trash2, Upload, X, Settings } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 
 interface Website {
@@ -275,6 +276,35 @@ export function AdminDashboard() {
     }
   }
 
+  const handleToggleSection = async (id: number, isActive: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/sections/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "更新成功",
+          description: `分区已${isActive ? "启用" : "禁用"}`,
+        })
+        loadData()
+      } else {
+        throw new Error("更新失败")
+      }
+    } catch (error) {
+      console.error("更新失败:", error)
+      toast({
+        title: "更新失败",
+        description: "请检查网络连接后重试",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -352,338 +382,474 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-200">管理后台</h1>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* 页面标题 */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            管理后台
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">管理网站内容和分区设置</p>
+        </motion.div>
 
-      <Tabs defaultValue="websites" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="websites">网站管理</TabsTrigger>
-          <TabsTrigger value="sections">分区管理</TabsTrigger>
-        </TabsList>
+        {/* 标签页 */}
+        <Tabs defaultValue="websites" className="space-y-8">
+          <div className="flex justify-center">
+            <TabsList className="grid w-full max-w-md grid-cols-2 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+              <TabsTrigger value="websites" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                网站管理
+              </TabsTrigger>
+              <TabsTrigger value="sections" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                分区管理
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="websites" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">网站管理</h2>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  添加网站
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingWebsite ? "编辑网站" : "添加新网站"}</DialogTitle>
-                </DialogHeader>
+          {/* 网站管理 */}
+          <TabsContent value="websites" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between"
+            >
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">网站管理</h2>
+                <p className="text-slate-600 dark:text-slate-400">管理导航网站的内容和信息</p>
+              </div>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                    <Plus className="w-4 h-4 mr-2" />
+                    添加网站
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">
+                      {editingWebsite ? "编辑网站" : "添加新网站"}
+                    </DialogTitle>
+                  </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                          网站名称 <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                          placeholder="输入网站名称"
+                          className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                          分类 <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={formData.section}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, section: value }))}
+                        >
+                          <SelectTrigger className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+                            <SelectValue placeholder="选择分类" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sections
+                              .filter((s) => s.is_active)
+                              .map((section) => (
+                                <SelectItem key={section.key} value={section.key}>
+                                  {section.icon} {section.title}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-sm font-medium mb-2">
-                        网站名称 <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                        网站描述 <span className="text-red-500">*</span>
                       </label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                        placeholder="输入网站名称"
+                      <Textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                        placeholder="输入网站描述"
+                        rows={3}
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">
-                        分类 <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                        网站链接 <span className="text-red-500">*</span>
                       </label>
-                      <Select
-                        value={formData.section}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, section: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择分类" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sections
-                            .filter((s) => s.is_active)
-                            .map((section) => (
-                              <SelectItem key={section.key} value={section.key}>
-                                {section.icon} {section.title}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="url"
+                        value={formData.url}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
+                        placeholder="https://example.com"
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                        required
+                      />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      网站描述 <span className="text-red-500">*</span>
-                    </label>
-                    <Textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                      placeholder="输入网站描述"
-                      rows={3}
-                      required
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">标签</label>
+                      <Input
+                        value={formData.tags}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
+                        placeholder="标签1, 标签2, 标签3"
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">用逗号分隔多个标签</p>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      网站链接 <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="url"
-                      value={formData.url}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
-                      placeholder="https://example.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">标签</label>
-                    <Input
-                      value={formData.tags}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
-                      placeholder="标签1, 标签2, 标签3"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">用逗号分隔多个标签</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Logo上传</label>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <Input type="file" accept="image/*" onChange={handleLogoUpload} className="flex-1" />
-                        {logoPreview && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setLogoPreview(null)
-                              setFormData((prev) => ({ ...prev, customLogo: "" }))
-                            }}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {logoPreview && (
-                        <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                          <img
-                            src={logoPreview || "/placeholder.svg"}
-                            alt="Logo预览"
-                            className="w-12 h-12 object-cover rounded-lg"
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                        Logo上传
+                      </label>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="flex-1 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
                           />
-                          <span className="text-sm text-slate-600 dark:text-slate-400">Logo预览</span>
+                          {logoPreview && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLogoPreview(null)
+                                setFormData((prev) => ({ ...prev, customLogo: "" }))
+                              }}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <Button type="submit" className="flex-1">
-                      {editingWebsite ? "更新网站" : "创建网站"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleDialogClose}>
-                      取消
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {websites.map((website) => (
-              <motion.div
-                key={website.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="h-full"
-              >
-                <Card className="h-full">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                        {website.custom_logo ? (
-                          <img
-                            src={website.custom_logo || "/placeholder.svg"}
-                            alt={website.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
-                            <Upload className="w-6 h-6" />
-                          </div>
+                        {logoPreview && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-blue-200 dark:border-slate-600"
+                          >
+                            <img
+                              src={logoPreview || "/placeholder.svg"}
+                              alt="Logo预览"
+                              className="w-12 h-12 object-cover rounded-lg shadow-md"
+                            />
+                            <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">Logo预览</span>
+                          </motion.div>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{website.name}</CardTitle>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{website.description}</p>
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          {getSectionTitle(website.section)}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-1">
-                      {website.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(website)} className="flex-1">
-                        <Edit className="w-4 h-4 mr-1" />
-                        编辑
-                      </Button>
+                    <div className="flex gap-3 pt-4">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(website.id, website.name)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {editingWebsite ? "更新网站" : "创建网站"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleDialogClose}>
+                        取消
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </motion.div>
 
-          {websites.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-500 dark:text-slate-400 mb-4">暂无网站数据</p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                添加第一个网站
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {websites.map((website, index) => (
+                <motion.div
+                  key={website.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="h-full"
+                >
+                  <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start gap-3">
+                        <motion.div
+                          whileHover={{ rotate: 360 }}
+                          transition={{ duration: 0.5 }}
+                          className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border border-slate-200 dark:border-slate-600"
+                        >
+                          {website.custom_logo ? (
+                            <img
+                              src={website.custom_logo || "/placeholder.svg"}
+                              alt={website.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                              <Upload className="w-6 h-6" />
+                            </div>
+                          )}
+                        </motion.div>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
+                            {website.name}
+                          </CardTitle>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-2">
+                            {website.description}
+                          </p>
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 text-blue-700 dark:text-blue-300 border-0"
+                          >
+                            {getSectionTitle(website.section)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {website.tags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="secondary"
+                            className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(website)}
+                          className="flex-1 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(website.id, website.name)}
+                          className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
-          )}
-        </TabsContent>
 
-        <TabsContent value="sections" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">分区管理</h2>
-            <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 hover:bg-green-700">
+            {websites.length === 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+                <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center">
+                  <Upload className="w-12 h-12 text-slate-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无网站数据</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">开始添加您的第一个网站吧</p>
+                <Button
+                  onClick={() => setDialogOpen(true)}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                >
                   <Plus className="w-4 h-4 mr-2" />
-                  添加分区
+                  添加第一个网站
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingSection ? "编辑分区" : "添加新分区"}</DialogTitle>
-                </DialogHeader>
+              </motion.div>
+            )}
+          </TabsContent>
 
-                <form onSubmit={handleSectionSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      分区标识 <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={sectionFormData.key}
-                      onChange={(e) => setSectionFormData((prev) => ({ ...prev, key: e.target.value }))}
-                      placeholder="例如: newSection"
-                      disabled={!!editingSection}
-                      required
-                    />
-                    <p className="text-xs text-slate-500 mt-1">只能包含字母、数字和下划线，创建后不可修改</p>
-                  </div>
+          {/* 分区管理 */}
+          <TabsContent value="sections" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between"
+            >
+              <div>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">分区管理</h2>
+                <p className="text-slate-600 dark:text-slate-400">管理网站分类和显示顺序</p>
+              </div>
+              <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                    <Plus className="w-4 h-4 mr-2" />
+                    添加分区
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">
+                      {editingSection ? "编辑分区" : "添加新分区"}
+                    </DialogTitle>
+                  </DialogHeader>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      分区标题 <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      value={sectionFormData.title}
-                      onChange={(e) => setSectionFormData((prev) => ({ ...prev, title: e.target.value }))}
-                      placeholder="例如: 新分区"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">图标</label>
-                    <Input
-                      value={sectionFormData.icon}
-                      onChange={(e) => setSectionFormData((prev) => ({ ...prev, icon: e.target.value }))}
-                      placeholder="📁"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">建议使用emoji图标</p>
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button type="submit" className="flex-1">
-                      {editingSection ? "更新分区" : "创建分区"}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleSectionDialogClose}>
-                      取消
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sections.map((section) => (
-              <Card key={section.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">{section.icon}</div>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{section.title}</CardTitle>
-                      <p className="text-sm text-slate-500">标识: {section.key}</p>
-                      <p className="text-sm text-slate-500">排序: {section.sort_order}</p>
+                  <form onSubmit={handleSectionSubmit} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                        分区标识 <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={sectionFormData.key}
+                        onChange={(e) => setSectionFormData((prev) => ({ ...prev, key: e.target.value }))}
+                        placeholder="例如: newSection"
+                        disabled={!!editingSection}
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                        required
+                      />
+                      <p className="text-xs text-slate-500 mt-1">只能包含字母、数字和下划线，创建后不可修改</p>
                     </div>
-                    <Badge variant={section.is_active ? "default" : "secondary"}>
-                      {section.is_active ? "启用" : "禁用"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditSection(section)} className="flex-1">
-                      <Edit className="w-4 h-4 mr-1" />
-                      编辑
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteSection(section.id, section.title)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
-          {sections.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-500 dark:text-slate-400 mb-4">暂无分区数据</p>
-              <Button onClick={() => setSectionDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                添加第一个分区
-              </Button>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                        分区标题 <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={sectionFormData.title}
+                        onChange={(e) => setSectionFormData((prev) => ({ ...prev, title: e.target.value }))}
+                        placeholder="例如: 新分区"
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">图标</label>
+                      <Input
+                        value={sectionFormData.icon}
+                        onChange={(e) => setSectionFormData((prev) => ({ ...prev, icon: e.target.value }))}
+                        placeholder="📁"
+                        className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">建议使用emoji图标</p>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                      >
+                        {editingSection ? "更新分区" : "创建分区"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={handleSectionDialogClose}>
+                        取消
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sections.map((section, index) => (
+                <motion.div
+                  key={section.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                >
+                  <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <motion.div
+                          whileHover={{ scale: 1.2, rotate: 360 }}
+                          transition={{ duration: 0.3 }}
+                          className="text-3xl p-2 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-xl"
+                        >
+                          {section.icon}
+                        </motion.div>
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {section.title}
+                          </CardTitle>
+                          <div className="space-y-1 mt-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              <span className="font-medium">标识:</span> {section.key}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                              <span className="font-medium">排序:</span> {section.sort_order}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge
+                            variant={section.is_active ? "default" : "secondary"}
+                            className={
+                              section.is_active
+                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white border-0"
+                                : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                            }
+                          >
+                            {section.is_active ? "启用" : "禁用"}
+                          </Badge>
+                          <Switch
+                            checked={section.is_active}
+                            onCheckedChange={(checked) => handleToggleSection(section.id, checked)}
+                            className="scale-75"
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditSection(section)}
+                          className="flex-1 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30"
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteSection(section.id, section.title)}
+                          className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:from-red-100 hover:to-red-200 dark:hover:from-red-800/30 dark:hover:to-red-700/30"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+
+            {sections.length === 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+                <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center">
+                  <Settings className="w-12 h-12 text-slate-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">暂无分区数据</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">开始添加您的第一个分区吧</p>
+                <Button
+                  onClick={() => setSectionDialogOpen(true)}
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  添加第一个分区
+                </Button>
+              </motion.div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
