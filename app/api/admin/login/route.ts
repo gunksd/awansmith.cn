@@ -1,34 +1,50 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { verifyAdminPassword, generateToken } from "@/lib/auth"
 import { cookies } from "next/headers"
-import { sign } from "jsonwebtoken"
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
-const ADMIN_USERNAME = "awan"
-const ADMIN_PASSWORD = "awansmith123"
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json()
+    console.log("[LOGIN API] 收到登录请求")
+
+    const body = await request.json()
+    const { username, password } = body
+
+    console.log("[LOGIN API] 用户名:", username)
 
     // 验证用户名和密码
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      // 生成JWT token
-      const token = sign({ username, role: "admin" }, JWT_SECRET, { expiresIn: "24h" })
-
-      // 设置cookie
-      const cookieStore = await cookies()
-      cookieStore.set("admin-token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60, // 24小时
-      })
-
-      return NextResponse.json({ success: true })
-    } else {
-      return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
+    if (username !== "awan") {
+      console.log("[LOGIN API] 用户名错误")
+      return NextResponse.json({ success: false, error: "用户名或密码错误" }, { status: 401 })
     }
+
+    if (!verifyAdminPassword(password)) {
+      console.log("[LOGIN API] 密码错误")
+      return NextResponse.json({ success: false, error: "用户名或密码错误" }, { status: 401 })
+    }
+
+    // 生成JWT令牌
+    const token = generateToken({ username, role: "admin" })
+    console.log("[LOGIN API] 生成令牌成功")
+
+    // 设置Cookie
+    const cookieStore = await cookies()
+    cookieStore.set("admin-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60, // 24小时
+      path: "/",
+    })
+
+    console.log("[LOGIN API] 登录成功")
+
+    return NextResponse.json({
+      success: true,
+      message: "登录成功",
+      token,
+    })
   } catch (error) {
-    return NextResponse.json({ error: "登录失败" }, { status: 500 })
+    console.error("[LOGIN API] 登录处理失败:", error)
+    return NextResponse.json({ success: false, error: "服务器内部错误" }, { status: 500 })
   }
 }

@@ -1,50 +1,89 @@
 import jwt from "jsonwebtoken"
-import type { NextRequest } from "next/server"
+import { cookies } from "next/headers"
 
+// JWT密钥
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"
 
-// 验证管理员密码
+// 管理员密码
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "awansmith123"
+
+/**
+ * 验证管理员密码
+ */
 export function verifyAdminPassword(password: string): boolean {
   return password === ADMIN_PASSWORD
 }
 
-// 生成JWT令牌
+/**
+ * 生成JWT令牌
+ */
 export function generateToken(payload: any): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" })
 }
 
-// 验证JWT令牌
+/**
+ * 验证JWT令牌
+ */
 export function verifyToken(token: string): any {
   try {
     return jwt.verify(token, JWT_SECRET)
   } catch (error) {
+    console.error("JWT验证失败:", error)
     return null
   }
 }
 
-// 从请求中验证认证信息
-export async function verifyAuth(request: NextRequest): Promise<{
-  success: boolean
-  user?: any
-  error?: string
-}> {
+/**
+ * 服务器端认证检查
+ */
+export async function verifyAuth(): Promise<boolean> {
   try {
-    const authHeader = request.headers.get("authorization")
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return { success: false, error: "缺少认证令牌" }
+    const cookieStore = await cookies()
+    const token = cookieStore.get("admin-token")?.value
+
+    if (!token) {
+      console.log("[AUTH] 未找到认证令牌")
+      return false
     }
 
-    const token = authHeader.substring(7)
     const decoded = verifyToken(token)
-
     if (!decoded) {
-      return { success: false, error: "无效的认证令牌" }
+      console.log("[AUTH] 令牌验证失败")
+      return false
     }
 
-    return { success: true, user: decoded }
+    console.log("[AUTH] 认证成功")
+    return true
   } catch (error) {
-    console.error("认证验证失败:", error)
-    return { success: false, error: "认证验证失败" }
+    console.error("[AUTH] 认证检查失败:", error)
+    return false
+  }
+}
+
+/**
+ * 客户端认证检查
+ */
+export function checkClientAuth(): boolean {
+  if (typeof window === "undefined") return false
+
+  try {
+    const token = localStorage.getItem("admin-token")
+    if (!token) {
+      console.log("[AUTH] 客户端未找到认证令牌")
+      return false
+    }
+
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      console.log("[AUTH] 客户端令牌验证失败")
+      localStorage.removeItem("admin-token")
+      return false
+    }
+
+    console.log("[AUTH] 客户端认证成功")
+    return true
+  } catch (error) {
+    console.error("[AUTH] 客户端认证检查失败:", error)
+    return false
   }
 }

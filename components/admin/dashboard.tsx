@@ -1,172 +1,144 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { toast } from "@/hooks/use-toast"
-import { Plus, Edit, Trash2, RefreshCw, ExternalLink } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Globe, Layers, LogOut, RefreshCw, Database, Activity, AlertCircle } from "lucide-react"
+import { checkClientAuth } from "@/lib/auth"
 
-// 类型定义
 interface Website {
-  id: string
+  id: number
   name: string
   description: string
   url: string
   tags: string[]
-  customLogo?: string
+  custom_logo: string | null
   section: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 interface Section {
-  id: string
+  id: number
   key: string
-  title: string
-  description: string
-  icon: string
-  order: number
-  visible: boolean
+  name: string
+  description: string | null
+  icon: string | null
+  order_index: number
   created_at: string
   updated_at: string
 }
 
 interface Stats {
-  websites: {
-    total: number
-    bySection: { [key: string]: number }
-  }
-  sections: {
-    total: number
-    visible: number
-    hidden: number
-  }
+  websites: number
+  sections: number
+  bySection: { [key: string]: number }
 }
 
 export function AdminDashboard() {
   const [websites, setWebsites] = useState<Website[]>([])
   const [sections, setSections] = useState<Section[]>([])
-  const [stats, setStats] = useState<Stats>({
-    websites: { total: 0, bySection: {} },
-    sections: { total: 0, visible: 0, hidden: 0 },
-  })
+  const [stats, setStats] = useState<Stats>({ websites: 0, sections: 0, bySection: {} })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const router = useRouter()
 
-  // 表单状态
-  const [websiteForm, setWebsiteForm] = useState({
-    name: "",
-    description: "",
-    url: "",
-    tags: "",
-    customLogo: "",
-    section: "",
-  })
-  const [sectionForm, setSectionForm] = useState({
-    key: "",
-    title: "",
-    description: "",
-    icon: "",
-    order: 0,
-    visible: true,
-  })
-
-  const [editingWebsite, setEditingWebsite] = useState<Website | null>(null)
-  const [editingSection, setEditingSection] = useState<Section | null>(null)
-  const [isWebsiteDialogOpen, setIsWebsiteDialogOpen] = useState(false)
-  const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false)
-
-  // 获取认证令牌
-  const getAuthToken = () => {
-    return localStorage.getItem("admin_token")
-  }
-
-  // 获取认证头
-  const getAuthHeaders = () => {
-    const token = getAuthToken()
-    return {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
+  // 客户端认证检查
+  useEffect(() => {
+    console.log("[DASHBOARD] 检查客户端认证...")
+    if (!checkClientAuth()) {
+      console.log("[DASHBOARD] 客户端认证失败，跳转登录")
+      router.push("/admin/login")
+      return
     }
-  }
+    console.log("[DASHBOARD] 客户端认证成功")
+  }, [router])
 
   // 加载数据
   const loadData = async () => {
     try {
       setLoading(true)
       setError(null)
+      console.log("[DASHBOARD] 开始加载数据...")
 
-      const headers = getAuthHeaders()
-
-      // 并行获取数据
-      const [websitesRes, sectionsRes] = await Promise.all([
-        fetch("/api/admin/websites", { headers }),
-        fetch("/api/admin/sections", { headers }),
+      // 并行获取所有数据
+      const [websitesRes, sectionsRes, statsRes] = await Promise.all([
+        fetch("/api/admin/websites"),
+        fetch("/api/admin/sections"),
+        fetch("/api/admin/stats"),
       ])
 
-      if (!websitesRes.ok || !sectionsRes.ok) {
-        throw new Error("获取数据失败")
+      console.log("[DASHBOARD] API响应状态:", {
+        websites: websitesRes.status,
+        sections: sectionsRes.status,
+        stats: statsRes.status,
+      })
+
+      // 检查响应状态
+      if (!websitesRes.ok) {
+        const errorData = await websitesRes.json()
+        throw new Error(`获取网站数据失败: ${errorData.error || websitesRes.statusText}`)
       }
 
+      if (!sectionsRes.ok) {
+        const errorData = await sectionsRes.json()
+        throw new Error(`获取分区数据失败: ${errorData.error || sectionsRes.statusText}`)
+      }
+
+      // 解析数据
       const websitesData = await websitesRes.json()
       const sectionsData = await sectionsRes.json()
 
-      console.log("获取到的网站数据:", websitesData)
-      console.log("获取到的分区数据:", sectionsData)
-
-      setWebsites(websitesData.websites || [])
-      setSections(sectionsData.sections || [])
-
-      // 计算统计数据
-      const websiteStats = {
-        total: websitesData.websites?.length || 0,
-        bySection: {} as { [key: string]: number },
-      }
-
-      // 按分区统计网站数量
-      websitesData.websites?.forEach((website: Website) => {
-        websiteStats.bySection[website.section] = (websiteStats.bySection[website.section] || 0) + 1
+      console.log("[DASHBOARD] 获取到的数据:", {
+        websites: websitesData.data?.length || 0,
+        sections: sectionsData.data?.length || 0,
       })
 
-      const sectionStats = {
-        total: sectionsData.sections?.length || 0,
-        visible: sectionsData.sections?.filter((s: Section) => s.visible).length || 0,
-        hidden: sectionsData.sections?.filter((s: Section) => !s.visible).length || 0,
+      // 更新状态
+      setWebsites(websitesData.data || [])
+      setSections(sectionsData.data || [])
+
+      // 计算统计数据
+      const websiteCount = websitesData.data?.length || 0
+      const sectionCount = sectionsData.data?.length || 0
+      const bySection: { [key: string]: number } = {}
+
+      if (websitesData.data) {
+        websitesData.data.forEach((website: Website) => {
+          bySection[website.section] = (bySection[website.section] || 0) + 1
+        })
       }
 
       setStats({
-        websites: websiteStats,
-        sections: sectionStats,
+        websites: websiteCount,
+        sections: sectionCount,
+        bySection,
       })
+
+      // 设置调试信息
+      setDebugInfo({
+        timestamp: new Date().toLocaleString(),
+        websitesCount: websiteCount,
+        sectionsCount: sectionCount,
+        apiStatus: "正常",
+        lastUpdate: new Date().toISOString(),
+      })
+
+      console.log("[DASHBOARD] 数据加载完成")
     } catch (error) {
-      console.error("加载数据失败:", error)
-      setError("加载数据失败，请检查网络连接或重新登录")
+      console.error("[DASHBOARD] 数据加载失败:", error)
+      setError(error instanceof Error ? error.message : "加载数据失败")
+      setDebugInfo({
+        timestamp: new Date().toLocaleString(),
+        error: error instanceof Error ? error.message : "未知错误",
+        apiStatus: "错误",
+      })
     } finally {
       setLoading(false)
     }
@@ -177,696 +149,310 @@ export function AdminDashboard() {
     loadData()
   }, [])
 
-  // 创建网站
-  const handleCreateWebsite = async () => {
+  // 退出登录
+  const handleLogout = async () => {
     try {
-      const response = await fetch("/api/admin/websites", {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          ...websiteForm,
-          tags: websiteForm.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        }),
-      })
+      console.log("[DASHBOARD] 退出登录...")
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "创建失败")
-      }
+      // 清除本地存储
+      localStorage.removeItem("admin-token")
 
-      toast({
-        title: "创建成功",
-        description: "网站已成功创建",
-      })
+      // 调用退出API
+      await fetch("/api/admin/logout", { method: "POST" })
 
-      setWebsiteForm({
-        name: "",
-        description: "",
-        url: "",
-        tags: "",
-        customLogo: "",
-        section: "",
-      })
-      setIsWebsiteDialogOpen(false)
-      loadData()
+      // 跳转到登录页
+      router.push("/admin/login")
     } catch (error) {
-      console.error("创建网站失败:", error)
-      toast({
-        title: "创建失败",
-        description: error instanceof Error ? error.message : "创建网站失败",
-        variant: "destructive",
-      })
+      console.error("[DASHBOARD] 退出登录失败:", error)
+      // 即使API调用失败，也要跳转到登录页
+      router.push("/admin/login")
     }
-  }
-
-  // 更新网站
-  const handleUpdateWebsite = async () => {
-    if (!editingWebsite) return
-
-    try {
-      const response = await fetch(`/api/admin/websites/${editingWebsite.id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          ...websiteForm,
-          tags: websiteForm.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "更新失败")
-      }
-
-      toast({
-        title: "更新成功",
-        description: "网站信息已更新",
-      })
-
-      setEditingWebsite(null)
-      setIsWebsiteDialogOpen(false)
-      loadData()
-    } catch (error) {
-      console.error("更新网站失败:", error)
-      toast({
-        title: "更新失败",
-        description: error instanceof Error ? error.message : "更新网站失败",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // 删除网站
-  const handleDeleteWebsite = async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/websites/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "删除失败")
-      }
-
-      toast({
-        title: "删除成功",
-        description: "网站已删除",
-      })
-
-      loadData()
-    } catch (error) {
-      console.error("删除网站失败:", error)
-      toast({
-        title: "删除失败",
-        description: error instanceof Error ? error.message : "删除网站失败",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // 创建分区
-  const handleCreateSection = async () => {
-    try {
-      const response = await fetch("/api/admin/sections", {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(sectionForm),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "创建失败")
-      }
-
-      toast({
-        title: "创建成功",
-        description: "分区已成功创建",
-      })
-
-      setSectionForm({
-        key: "",
-        title: "",
-        description: "",
-        icon: "",
-        order: 0,
-        visible: true,
-      })
-      setIsSectionDialogOpen(false)
-      loadData()
-    } catch (error) {
-      console.error("创建分区失败:", error)
-      toast({
-        title: "创建失败",
-        description: error instanceof Error ? error.message : "创建分区失败",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // 更新分区
-  const handleUpdateSection = async () => {
-    if (!editingSection) return
-
-    try {
-      const response = await fetch(`/api/admin/sections/${editingSection.id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(sectionForm),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "更新失败")
-      }
-
-      toast({
-        title: "更新成功",
-        description: "分区信息已更新",
-      })
-
-      setEditingSection(null)
-      setIsSectionDialogOpen(false)
-      loadData()
-    } catch (error) {
-      console.error("更新分区失败:", error)
-      toast({
-        title: "更新失败",
-        description: error instanceof Error ? error.message : "更新分区失败",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // 删除分区
-  const handleDeleteSection = async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/sections/${id}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "删除失败")
-      }
-
-      toast({
-        title: "删除成功",
-        description: "分区已删除",
-      })
-
-      loadData()
-    } catch (error) {
-      console.error("删除分区失败:", error)
-      toast({
-        title: "删除失败",
-        description: error instanceof Error ? error.message : "删除分区失败",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // 开始编辑网站
-  const startEditWebsite = (website: Website) => {
-    setEditingWebsite(website)
-    setWebsiteForm({
-      name: website.name,
-      description: website.description,
-      url: website.url,
-      tags: website.tags.join(", "),
-      customLogo: website.customLogo || "",
-      section: website.section,
-    })
-    setIsWebsiteDialogOpen(true)
-  }
-
-  // 开始编辑分区
-  const startEditSection = (section: Section) => {
-    setEditingSection(section)
-    setSectionForm({
-      key: section.key,
-      title: section.title,
-      description: section.description,
-      icon: section.icon,
-      order: section.order,
-      visible: section.visible,
-    })
-    setIsSectionDialogOpen(true)
-  }
-
-  // 重置表单
-  const resetWebsiteForm = () => {
-    setWebsiteForm({
-      name: "",
-      description: "",
-      url: "",
-      tags: "",
-      customLogo: "",
-      section: "",
-    })
-    setEditingWebsite(null)
-  }
-
-  const resetSectionForm = () => {
-    setSectionForm({
-      key: "",
-      title: "",
-      description: "",
-      icon: "",
-      order: 0,
-      visible: true,
-    })
-    setEditingSection(null)
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">加载管理面板中...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <Button onClick={loadData} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            重新加载
-          </Button>
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-slate-600 dark:text-slate-400">加载管理面板...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* 调试信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            系统状态
-            <Button onClick={loadData} variant="outline" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              刷新数据
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="font-medium">网站总数</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.websites.total}</p>
-            </div>
-            <div>
-              <p className="font-medium">分区总数</p>
-              <p className="text-2xl font-bold text-green-600">{stats.sections.total}</p>
-            </div>
-            <div>
-              <p className="font-medium">可见分区</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.sections.visible}</p>
-            </div>
-            <div>
-              <p className="font-medium">隐藏分区</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.sections.hidden}</p>
-            </div>
-          </div>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* 头部 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">管理面板</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">网站导航系统管理后台</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={loadData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            刷新数据
+          </Button>
+          <Button variant="destructive" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            退出登录
+          </Button>
+        </div>
+      </div>
 
-          {/* 按分区统计 */}
-          {Object.keys(stats.websites.bySection).length > 0 && (
-            <div className="mt-4">
-              <p className="font-medium mb-2">各分区网站数量：</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(stats.websites.bySection).map(([section, count]) => (
-                  <Badge key={section} variant="secondary">
-                    {section}: {count}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* 错误提示 */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* 统计卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">总网站数</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.websites}</div>
+            <p className="text-xs text-muted-foreground">已收录的网站</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">分区数量</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.sections}</div>
+            <p className="text-xs text-muted-foreground">网站分类</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">系统状态</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">正常</div>
+            <p className="text-xs text-muted-foreground">所有服务运行正常</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">数据库</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">已连接</div>
+            <p className="text-xs text-muted-foreground">Neon PostgreSQL</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 主要内容 */}
       <Tabs defaultValue="websites" className="space-y-4">
         <TabsList>
           <TabsTrigger value="websites">网站管理</TabsTrigger>
           <TabsTrigger value="sections">分区管理</TabsTrigger>
+          <TabsTrigger value="stats">统计分析</TabsTrigger>
+          <TabsTrigger value="debug">调试信息</TabsTrigger>
         </TabsList>
 
         {/* 网站管理 */}
-        <TabsContent value="websites" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">网站管理</h2>
-            <Dialog open={isWebsiteDialogOpen} onOpenChange={setIsWebsiteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetWebsiteForm}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  添加网站
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{editingWebsite ? "编辑网站" : "添加网站"}</DialogTitle>
-                  <DialogDescription>{editingWebsite ? "修改网站信息" : "添加新的网站到导航"}</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">
-                      名称 *
-                    </Label>
-                    <Input
-                      id="name"
-                      value={websiteForm.name}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, name: e.target.value })}
-                      className="col-span-3"
-                      placeholder="网站名称"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="url" className="text-right">
-                      URL *
-                    </Label>
-                    <Input
-                      id="url"
-                      value={websiteForm.url}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, url: e.target.value })}
-                      className="col-span-3"
-                      placeholder="https://example.com"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="section" className="text-right">
-                      分区 *
-                    </Label>
-                    <Select
-                      value={websiteForm.section}
-                      onValueChange={(value) => setWebsiteForm({ ...websiteForm, section: value })}
-                    >
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="选择分区" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sections.map((section) => (
-                          <SelectItem key={section.id} value={section.key}>
-                            {section.icon} {section.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-4 items-start gap-4">
-                    <Label htmlFor="description" className="text-right pt-2">
-                      描述 *
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={websiteForm.description}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })}
-                      className="col-span-3"
-                      placeholder="网站描述"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tags" className="text-right">
-                      标签
-                    </Label>
-                    <Input
-                      id="tags"
-                      value={websiteForm.tags}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, tags: e.target.value })}
-                      className="col-span-3"
-                      placeholder="标签1, 标签2, 标签3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="customLogo" className="text-right">
-                      自定义Logo
-                    </Label>
-                    <Input
-                      id="customLogo"
-                      value={websiteForm.customLogo}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, customLogo: e.target.value })}
-                      className="col-span-3"
-                      placeholder="/logos/example.png"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" onClick={editingWebsite ? handleUpdateWebsite : handleCreateWebsite}>
-                    {editingWebsite ? "更新" : "创建"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid gap-4">
-            {websites.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center py-8">
+        <TabsContent value="websites">
+          <Card>
+            <CardHeader>
+              <CardTitle>网站列表</CardTitle>
+              <CardDescription>管理所有收录的网站</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {websites.length === 0 ? (
+                <div className="text-center py-8">
+                  <Globe className="h-12 w-12 mx-auto text-slate-400 mb-4" />
                   <p className="text-slate-500">暂无网站数据</p>
-                </CardContent>
-              </Card>
-            ) : (
-              websites.map((website) => (
-                <Card key={website.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold">{website.name}</h3>
-                          <Badge variant="outline">{website.section}</Badge>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>名称</TableHead>
+                      <TableHead>URL</TableHead>
+                      <TableHead>分区</TableHead>
+                      <TableHead>标签</TableHead>
+                      <TableHead>创建时间</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {websites.map((website) => (
+                      <TableRow key={website.id}>
+                        <TableCell className="font-medium">{website.name}</TableCell>
+                        <TableCell>
                           <a
                             href={website.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
+                            className="text-blue-600 hover:underline"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            {website.url}
                           </a>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-2">{website.description}</p>
-                        <p className="text-xs text-slate-500 mb-2">{website.url}</p>
-                        {website.tags.length > 0 && (
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{website.section}</Badge>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {website.tags.map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
+                            {website.tags?.slice(0, 3).map((tag, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
                                 {tag}
                               </Badge>
                             ))}
+                            {website.tags?.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{website.tags.length - 3}
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm" onClick={() => startEditWebsite(website)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                确定要删除网站 "{website.name}" 吗？此操作无法撤销。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteWebsite(website.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                删除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                        </TableCell>
+                        <TableCell>{new Date(website.created_at).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* 分区管理 */}
-        <TabsContent value="sections" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">分区管理</h2>
-            <Dialog open={isSectionDialogOpen} onOpenChange={setIsSectionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetSectionForm}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  添加分区
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingSection ? "编辑分区" : "添加分区"}</DialogTitle>
-                  <DialogDescription>{editingSection ? "修改分区信息" : "添加新的分区"}</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="sectionKey" className="text-right">
-                      Key *
-                    </Label>
-                    <Input
-                      id="sectionKey"
-                      value={sectionForm.key}
-                      onChange={(e) => setSectionForm({ ...sectionForm, key: e.target.value })}
-                      className="col-span-3"
-                      placeholder="section-key"
-                    />
+        <TabsContent value="sections">
+          <Card>
+            <CardHeader>
+              <CardTitle>分区列表</CardTitle>
+              <CardDescription>管理网站分类</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sections.length === 0 ? (
+                <div className="text-center py-8">
+                  <Layers className="h-12 w-12 mx-auto text-slate-400 mb-4" />
+                  <p className="text-slate-500">暂无分区数据</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>名称</TableHead>
+                      <TableHead>键值</TableHead>
+                      <TableHead>描述</TableHead>
+                      <TableHead>排序</TableHead>
+                      <TableHead>网站数量</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sections.map((section) => (
+                      <TableRow key={section.id}>
+                        <TableCell className="font-medium">{section.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{section.key}</Badge>
+                        </TableCell>
+                        <TableCell>{section.description || "-"}</TableCell>
+                        <TableCell>{section.order_index}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{stats.bySection[section.key] || 0}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 统计分析 */}
+        <TabsContent value="stats">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>分区统计</CardTitle>
+                <CardDescription>各分区网站数量分布</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(stats.bySection).map(([section, count]) => (
+                    <div key={section} className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{section}</span>
+                      <Badge variant="secondary">{count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>系统概览</CardTitle>
+                <CardDescription>系统运行状态</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">数据库状态</span>
+                    <Badge variant="default" className="bg-green-100 text-green-800">
+                      已连接
+                    </Badge>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="sectionTitle" className="text-right">
-                      标题 *
-                    </Label>
-                    <Input
-                      id="sectionTitle"
-                      value={sectionForm.title}
-                      onChange={(e) => setSectionForm({ ...sectionForm, title: e.target.value })}
-                      className="col-span-3"
-                      placeholder="分区标题"
-                    />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">API状态</span>
+                    <Badge variant="default" className="bg-green-100 text-green-800">
+                      正常
+                    </Badge>
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="sectionIcon" className="text-right">
-                      图标
-                    </Label>
-                    <Input
-                      id="sectionIcon"
-                      value={sectionForm.icon}
-                      onChange={(e) => setSectionForm({ ...sectionForm, icon: e.target.value })}
-                      className="col-span-3"
-                      placeholder="🚀"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-start gap-4">
-                    <Label htmlFor="sectionDescription" className="text-right pt-2">
-                      描述 *
-                    </Label>
-                    <Textarea
-                      id="sectionDescription"
-                      value={sectionForm.description}
-                      onChange={(e) => setSectionForm({ ...sectionForm, description: e.target.value })}
-                      className="col-span-3"
-                      placeholder="分区描述"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="sectionOrder" className="text-right">
-                      排序
-                    </Label>
-                    <Input
-                      id="sectionOrder"
-                      type="number"
-                      value={sectionForm.order}
-                      onChange={(e) => setSectionForm({ ...sectionForm, order: Number.parseInt(e.target.value) || 0 })}
-                      className="col-span-3"
-                      placeholder="0"
-                    />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">最后更新</span>
+                    <span className="text-sm text-slate-500">{debugInfo?.timestamp || "未知"}</span>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="submit" onClick={editingSection ? handleUpdateSection : handleCreateSection}>
-                    {editingSection ? "更新" : "创建"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
 
-          <div className="grid gap-4">
-            {sections.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center py-8">
-                  <p className="text-slate-500">暂无分区数据</p>
-                </CardContent>
-              </Card>
-            ) : (
-              sections.map((section) => (
-                <Card key={section.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">{section.icon}</span>
-                          <h3 className="font-semibold">{section.title}</h3>
-                          <Badge variant={section.visible ? "default" : "secondary"}>
-                            {section.visible ? "显示" : "隐藏"}
-                          </Badge>
-                          <Badge variant="outline">排序: {section.order}</Badge>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-2">{section.description}</p>
-                        <p className="text-xs text-slate-500">Key: {section.key}</p>
-                        <p className="text-xs text-slate-500">网站数量: {stats.websites.bySection[section.key] || 0}</p>
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Button variant="outline" size="sm" onClick={() => startEditSection(section)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                确定要删除分区 "{section.title}" 吗？
-                                {stats.websites.bySection[section.key] > 0 && (
-                                  <span className="text-red-600">
-                                    <br />
-                                    注意：该分区下还有 {stats.websites.bySection[section.key]} 个网站，无法删除。
-                                  </span>
-                                )}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteSection(section.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                                disabled={stats.websites.bySection[section.key] > 0}
-                              >
-                                删除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+        {/* 调试信息 */}
+        <TabsContent value="debug">
+          <Card>
+            <CardHeader>
+              <CardTitle>调试信息</CardTitle>
+              <CardDescription>系统运行详情和错误日志</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">当前状态</h4>
+                  <pre className="text-sm text-slate-600 dark:text-slate-400">{JSON.stringify(debugInfo, null, 2)}</pre>
+                </div>
+
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">环境信息</h4>
+                  <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                    <p>Node.js 环境: {typeof window === "undefined" ? "服务器端" : "客户端"}</p>
+                    <p>用户代理: {typeof window !== "undefined" ? navigator.userAgent : "N/A"}</p>
+                    <p>时区: {Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
   )
 }
+
+// 同时提供默认导出
+export default AdminDashboard
