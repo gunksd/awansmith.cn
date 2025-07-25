@@ -7,7 +7,7 @@ if (!process.env.DATABASE_URL) {
 // 创建数据库连接
 export const sql = neon(process.env.DATABASE_URL)
 
-// 数据库操作函数
+// 网站数据库接口
 export interface DatabaseWebsite {
   id: number
   name: string
@@ -24,7 +24,17 @@ export interface DatabaseWebsite {
 export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
   try {
     const websites = await sql`
-      SELECT * FROM websites 
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo,
+        section,
+        created_at,
+        updated_at
+      FROM websites 
       ORDER BY section, created_at DESC
     `
     return websites as DatabaseWebsite[]
@@ -38,7 +48,17 @@ export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
 export async function getWebsitesBySection(section: string): Promise<DatabaseWebsite[]> {
   try {
     const websites = await sql`
-      SELECT * FROM websites 
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo,
+        section,
+        created_at,
+        updated_at
+      FROM websites 
       WHERE section = ${section}
       ORDER BY created_at DESC
     `
@@ -61,7 +81,14 @@ export async function createWebsite(data: {
   try {
     const result = await sql`
       INSERT INTO websites (name, description, url, tags, custom_logo, section)
-      VALUES (${data.name}, ${data.description}, ${data.url}, ${data.tags}, ${data.customLogo || null}, ${data.section})
+      VALUES (
+        ${data.name}, 
+        ${data.description}, 
+        ${data.url}, 
+        ${data.tags}, 
+        ${data.customLogo || null}, 
+        ${data.section}
+      )
       RETURNING *
     `
     return result[0] as DatabaseWebsite
@@ -118,5 +145,40 @@ export async function deleteWebsite(id: number): Promise<boolean> {
   } catch (error) {
     console.error("删除网站失败:", error)
     throw new Error("删除网站失败")
+  }
+}
+
+// 获取网站统计
+export async function getWebsiteStats(): Promise<{
+  total: number
+  bySection: { [key: string]: number }
+}> {
+  try {
+    // 获取总数
+    const totalStats = await sql`
+      SELECT COUNT(*) as total FROM websites
+    `
+
+    // 获取按分区统计
+    const sectionStats = await sql`
+      SELECT 
+        section,
+        COUNT(*) as count
+      FROM websites
+      GROUP BY section
+    `
+
+    const bySection: { [key: string]: number } = {}
+    sectionStats.forEach((stat: any) => {
+      bySection[stat.section] = Number.parseInt(stat.count)
+    })
+
+    return {
+      total: Number.parseInt(totalStats[0].total),
+      bySection,
+    }
+  } catch (error) {
+    console.error("获取网站统计失败:", error)
+    throw new Error("获取网站统计失败")
   }
 }

@@ -1,75 +1,50 @@
-import { cookies } from "next/headers"
-import { verify, sign } from "jsonwebtoken"
+import jwt from "jsonwebtoken"
+import type { NextRequest } from "next/server"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123"
 
-/**
- * 检查用户是否已认证
- * @returns Promise<boolean> 认证状态
- */
-export async function checkAuth(): Promise<boolean> {
+// 验证管理员密码
+export function verifyAdminPassword(password: string): boolean {
+  return password === ADMIN_PASSWORD
+}
+
+// 生成JWT令牌
+export function generateToken(payload: any): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" })
+}
+
+// 验证JWT令牌
+export function verifyToken(token: string): any {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get("admin-token")?.value
+    return jwt.verify(token, JWT_SECRET)
+  } catch (error) {
+    return null
+  }
+}
 
-    if (!token) {
-      return false
+// 从请求中验证认证信息
+export async function verifyAuth(request: NextRequest): Promise<{
+  success: boolean
+  user?: any
+  error?: string
+}> {
+  try {
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return { success: false, error: "缺少认证令牌" }
     }
 
-    verify(token, JWT_SECRET)
-    return true
+    const token = authHeader.substring(7)
+    const decoded = verifyToken(token)
+
+    if (!decoded) {
+      return { success: false, error: "无效的认证令牌" }
+    }
+
+    return { success: true, user: decoded }
   } catch (error) {
-    return false
+    console.error("认证验证失败:", error)
+    return { success: false, error: "认证验证失败" }
   }
-}
-
-/**
- * 验证JWT令牌
- * @param token JWT令牌
- * @returns 解码后的payload或null
- */
-export function verifyToken(token: string): any | null {
-  try {
-    return verify(token, JWT_SECRET)
-  } catch (error) {
-    return null
-  }
-}
-
-/**
- * 验证用户认证状态（同步版本）
- * @param token JWT令牌
- * @returns boolean 认证状态
- */
-export function verifyAuth(token: string): boolean {
-  try {
-    verify(token, JWT_SECRET)
-    return true
-  } catch (error) {
-    return false
-  }
-}
-
-/**
- * 生成JWT令牌
- * @param payload 要编码的数据
- * @param expiresIn 过期时间，默认24小时
- * @returns JWT令牌
- */
-export function generateToken(payload: any, expiresIn = "24h"): string {
-  return sign(payload, JWT_SECRET, { expiresIn })
-}
-
-/**
- * 从请求头中获取并验证令牌
- * @param authHeader Authorization头部
- * @returns 解码后的payload或null
- */
-export function verifyAuthHeader(authHeader: string | null): any | null {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  return verifyToken(token)
 }
