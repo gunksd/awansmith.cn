@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
-import { updateSectionsOrder } from "@/lib/database"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function PUT(request: Request) {
   try {
@@ -16,15 +18,23 @@ export async function PUT(request: Request) {
       }
     }
 
-    const success = await updateSectionsOrder(data.sections)
-
-    if (success) {
-      return NextResponse.json({ message: "排序更新成功" })
-    } else {
-      return NextResponse.json({ error: "更新失败" }, { status: 500 })
+    // 批量更新分区排序
+    for (const section of data.sections) {
+      await sql`
+        UPDATE sections 
+        SET sort_order = ${section.sortOrder}, updated_at = NOW()
+        WHERE id = ${section.id}
+      `
     }
+
+    return NextResponse.json({ message: "排序更新成功" })
   } catch (error) {
     console.error("更新分区排序失败:", error)
-    return NextResponse.json({ error: error.message || "更新失败" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "更新失败",
+      },
+      { status: 500 },
+    )
   }
 }

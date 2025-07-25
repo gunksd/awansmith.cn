@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Upload, X, Settings, ChevronUp, ChevronDown } from "lucide-react"
+import { Plus, Edit, Trash2, Upload, X, Settings, GripVertical } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +47,7 @@ export function AdminDashboard() {
   const [sectionDialogOpen, setSectionDialogOpen] = useState(false)
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null)
   const [editingSection, setEditingSection] = useState<Section | null>(null)
+  const [draggedSection, setDraggedSection] = useState<Section | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -276,6 +277,7 @@ export function AdminDashboard() {
     }
   }
 
+  // 优化的分区状态切换 - 不重新加载整个页面
   const handleToggleSection = async (id: number, isActive: boolean) => {
     try {
       const response = await fetch(`/api/admin/sections/${id}`, {
@@ -287,11 +289,15 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        // 只更新本地状态，不重新加载整个页面
+        setSections((prevSections) =>
+          prevSections.map((section) => (section.id === id ? { ...section, is_active: isActive } : section)),
+        )
+
         toast({
           title: "更新成功",
           description: `分区已${isActive ? "启用" : "禁用"}`,
         })
-        loadData()
       } else {
         throw new Error("更新失败")
       }
@@ -305,26 +311,41 @@ export function AdminDashboard() {
     }
   }
 
-  // 调整分区顺序
-  const handleMoveSectionOrder = async (sectionId: number, direction: "up" | "down") => {
-    const currentSection = sections.find((s) => s.id === sectionId)
-    if (!currentSection) return
+  // 拖拽排序功能
+  const handleDragStart = (e: React.DragEvent, section: Section) => {
+    setDraggedSection(section)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/html", "")
+  }
 
-    const sortedSections = [...sections].sort((a, b) => a.sort_order - b.sort_order)
-    const currentIndex = sortedSections.findIndex((s) => s.id === sectionId)
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
 
-    if (direction === "up" && currentIndex === 0) return
-    if (direction === "down" && currentIndex === sortedSections.length - 1) return
+  const handleDrop = async (e: React.DragEvent, targetSection: Section) => {
+    e.preventDefault()
 
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
-    const targetSection = sortedSections[targetIndex]
+    if (!draggedSection || draggedSection.id === targetSection.id) {
+      setDraggedSection(null)
+      return
+    }
 
     try {
-      // 交换排序值
-      const updateData = [
-        { id: currentSection.id, sortOrder: targetSection.sort_order },
-        { id: targetSection.id, sortOrder: currentSection.sort_order },
-      ]
+      const sortedSections = [...sections].sort((a, b) => a.sort_order - b.sort_order)
+      const draggedIndex = sortedSections.findIndex((s) => s.id === draggedSection.id)
+      const targetIndex = sortedSections.findIndex((s) => s.id === targetSection.id)
+
+      // 创建新的排序数组
+      const newSortedSections = [...sortedSections]
+      const [removed] = newSortedSections.splice(draggedIndex, 1)
+      newSortedSections.splice(targetIndex, 0, removed)
+
+      // 生成新的排序值
+      const updateData = newSortedSections.map((section, index) => ({
+        id: section.id,
+        sortOrder: index + 1,
+      }))
 
       const response = await fetch("/api/admin/sections/order", {
         method: "PUT",
@@ -335,11 +356,19 @@ export function AdminDashboard() {
       })
 
       if (response.ok) {
+        // 更新本地状态
+        setSections((prevSections) => {
+          const updatedSections = prevSections.map((section) => {
+            const update = updateData.find((u) => u.id === section.id)
+            return update ? { ...section, sort_order: update.sortOrder } : section
+          })
+          return updatedSections
+        })
+
         toast({
           title: "排序更新成功",
-          description: `分区 "${currentSection.title}" 已${direction === "up" ? "上移" : "下移"}`,
+          description: `分区 "${draggedSection.title}" 已移动`,
         })
-        loadData()
       } else {
         throw new Error("更新排序失败")
       }
@@ -350,7 +379,13 @@ export function AdminDashboard() {
         description: "请检查网络连接后重试",
         variant: "destructive",
       })
+    } finally {
+      setDraggedSection(null)
     }
+  }
+
+  const handleDragEnd = () => {
+    setDraggedSection(null)
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -770,7 +805,7 @@ export function AdminDashboard() {
             >
               <div>
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">分区管理</h2>
-                <p className="text-slate-600 dark:text-slate-400">管理网站分类和显示顺序</p>
+                <p className="text-slate-600 dark:text-slate-400">管理网站分类和显示顺序 - 拖拽卡片可调整排序</p>
               </div>
               <Dialog open={sectionDialogOpen} onOpenChange={setSectionDialogOpen}>
                 <DialogTrigger asChild>
@@ -842,6 +877,21 @@ export function AdminDashboard() {
               </Dialog>
             </motion.div>
 
+            {/* 拖拽排序提示 */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl border border-blue-200 dark:border-slate-600"
+            >
+              <div className="flex items-center gap-3">
+                <GripVertical className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <span className="font-medium">拖拽排序：</span>
+                  按住分区卡片拖拽到目标位置即可调整显示顺序
+                </p>
+              </div>
+            </motion.div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sections
                 .sort((a, b) => a.sort_order - b.sort_order)
@@ -852,8 +902,19 @@ export function AdminDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ y: -4, scale: 1.02 }}
+                    className={`cursor-move ${draggedSection?.id === section.id ? "opacity-50" : ""}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, section)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, section)}
+                    onDragEnd={handleDragEnd}
                   >
-                    <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                    <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm relative">
+                      {/* 拖拽指示器 */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <GripVertical className="w-4 h-4 text-slate-400" />
+                      </div>
+
                       <CardHeader className="pb-3">
                         <div className="flex items-center gap-3">
                           <motion.div
@@ -895,30 +956,7 @@ export function AdminDashboard() {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-3">
-                        {/* 排序控制按钮 */}
-                        <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                          <span className="text-xs text-slate-600 dark:text-slate-400 flex-1">调整顺序:</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMoveSectionOrder(section.id, "up")}
-                            disabled={index === 0}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMoveSectionOrder(section.id, "down")}
-                            disabled={index === sections.length - 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                        </div>
-
+                      <CardContent>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
