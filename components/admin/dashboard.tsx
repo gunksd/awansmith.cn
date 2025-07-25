@@ -36,6 +36,14 @@ const sectionOptions = [
 ]
 
 export function AdminDashboard() {
+  const sectionTitles = {
+    funding: "🚀 融资信息",
+    tradingData: "📊 交易数据工具",
+    faucet: "💧 领水网站",
+    airdrop: "🎁 空投网站",
+    tutorial: "📚 小白教程",
+    exchange: "💱 交易所邀请",
+  }
   const [websites, setWebsites] = useState<Website[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -72,6 +80,25 @@ export function AdminDashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 按分区分组网站数据
+  const groupWebsitesBySection = (websites: Website[]) => {
+    const grouped: Record<string, Website[]> = {}
+
+    // 初始化所有分区
+    Object.keys(sectionTitles).forEach((section) => {
+      grouped[section] = []
+    })
+
+    // 分组网站
+    websites.forEach((website) => {
+      if (grouped[website.section]) {
+        grouped[website.section].push(website)
+      }
+    })
+
+    return grouped
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -314,7 +341,7 @@ export function AdminDashboard() {
                 <Input
                   value={formData.tags}
                   onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
-                  placeholder="标签1, 标签2, 标签3"
+                  placeholder="标签1, 标签2, 标签 3"
                 />
                 <p className="text-xs text-slate-500 mt-1">用逗号分隔多个标签</p>
               </div>
@@ -365,70 +392,130 @@ export function AdminDashboard() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {websites.map((website) => (
-          <motion.div
-            key={website.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="h-full"
-          >
-            <Card className="h-full">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                    {website.custom_logo ? (
-                      <img
-                        src={website.custom_logo || "/placeholder.svg"}
-                        alt={website.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400">
-                        <Upload className="w-6 h-6" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{website.name}</CardTitle>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{website.description}</p>
-                  </div>
-                </div>
-              </CardHeader>
+      {/* 按分区显示网站 */}
+      <div className="space-y-8">
+        {Object.entries(sectionTitles).map(([sectionKey, title]) => {
+          const sectionWebsites = groupWebsitesBySection(websites)[sectionKey] || []
 
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-1">
-                  {website.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
+          if (sectionWebsites.length === 0) return null
 
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(website)} className="flex-1">
-                    <Edit className="w-4 h-4 mr-1" />
-                    编辑
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(website.id, website.name)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          return (
+            <motion.section
+              key={sectionKey}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-200">{title}</h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600"></div>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{sectionWebsites.length} 个</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                {sectionWebsites.map((website, index) => (
+                  <motion.div
+                    key={website.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="h-full"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                    <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start gap-3">
+                          <motion.div
+                            whileHover={{ rotate: 360 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex-shrink-0 border border-slate-200 dark:border-slate-600"
+                          >
+                            {website.custom_logo ? (
+                              <img
+                                src={website.custom_logo || "/placeholder.svg"}
+                                alt={website.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                <Upload className="w-6 h-6" />
+                              </div>
+                            )}
+                          </motion.div>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
+                              {website.name}
+                            </CardTitle>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                              {website.description}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="pt-0 space-y-3">
+                        {/* 标签区域 */}
+                        <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                          {website.tags.slice(0, 3).map((tag) => (
+                            <Badge
+                              key={tag}
+                              variant="secondary"
+                              className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                          {website.tags.length > 3 && (
+                            <Badge variant="secondary" className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700">
+                              +{website.tags.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* 网站链接 */}
+                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{website.url}</div>
+
+                        {/* 操作按钮 */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(website)}
+                            className="flex-1 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 border-slate-200 dark:border-slate-600"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            编辑
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(website.id, website.name)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 border-slate-200 dark:border-slate-600 bg-transparent"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.section>
+          )
+        })}
       </div>
 
       {websites.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500 dark:text-slate-400 mb-4">暂无网站数据</p>
-          <Button onClick={() => setDialogOpen(true)}>
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
+            <Upload className="w-12 h-12 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">暂无网站数据</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">开始添加您的第一个网站吧</p>
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          >
             <Plus className="w-4 h-4 mr-2" />
             添加第一个网站
           </Button>
