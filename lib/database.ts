@@ -16,6 +16,7 @@ export interface DatabaseWebsite {
   tags: string[]
   custom_logo: string | null
   section: string
+  sort_order: number
   created_at: string
   updated_at: string
 }
@@ -37,7 +38,7 @@ export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
   try {
     const websites = await sql`
       SELECT * FROM websites 
-      ORDER BY section, created_at DESC
+      ORDER BY section, sort_order ASC, created_at DESC
     `
     return websites as DatabaseWebsite[]
   } catch (error) {
@@ -52,7 +53,7 @@ export async function getWebsitesBySection(section: string): Promise<DatabaseWeb
     const websites = await sql`
       SELECT * FROM websites 
       WHERE section = ${section}
-      ORDER BY created_at DESC
+      ORDER BY sort_order ASC, created_at DESC
     `
     return websites as DatabaseWebsite[]
   } catch (error) {
@@ -71,9 +72,17 @@ export async function createWebsite(data: {
   section: string
 }): Promise<DatabaseWebsite> {
   try {
+    // 获取该分区的最大排序值
+    const maxOrder = await sql`
+      SELECT COALESCE(MAX(sort_order), 0) as max_order 
+      FROM websites 
+      WHERE section = ${data.section}
+    `
+    const nextOrder = maxOrder[0].max_order + 1
+
     const result = await sql`
-      INSERT INTO websites (name, description, url, tags, custom_logo, section)
-      VALUES (${data.name}, ${data.description}, ${data.url}, ${data.tags}, ${data.customLogo || null}, ${data.section})
+      INSERT INTO websites (name, description, url, tags, custom_logo, section, sort_order)
+      VALUES (${data.name}, ${data.description}, ${data.url}, ${data.tags}, ${data.customLogo || null}, ${data.section}, ${nextOrder})
       RETURNING *
     `
     return result[0] as DatabaseWebsite
@@ -130,6 +139,24 @@ export async function deleteWebsite(id: number): Promise<boolean> {
   } catch (error) {
     console.error("删除网站失败:", error)
     throw new Error("删除网站失败")
+  }
+}
+
+// 批量更新网站排序
+export async function updateWebsitesOrder(websites: { id: number; sortOrder: number }[]): Promise<boolean> {
+  try {
+    // 使用事务批量更新
+    for (const website of websites) {
+      await sql`
+        UPDATE websites 
+        SET sort_order = ${website.sortOrder}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${website.id}
+      `
+    }
+    return true
+  } catch (error) {
+    console.error("更新网站排序失败:", error)
+    throw new Error("更新网站排序失败")
   }
 }
 

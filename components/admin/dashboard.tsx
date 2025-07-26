@@ -24,6 +24,7 @@ interface Website {
   tags: string[]
   custom_logo: string | null
   section: string
+  sort_order: number
   created_at: string
   updated_at: string
 }
@@ -44,32 +45,19 @@ const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-[400px]">
     <div className="relative">
       {/* 外圈旋转动画 */}
-      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 dark:border-blue-800"></div>
-      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-200 dark:border-orange-800"></div>
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-600 border-t-transparent absolute top-0 left-0"></div>
 
-      {/* 中心SVG图标 */}
+      {/* 中心💸图标 */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <motion.svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          className="text-blue-600 dark:text-blue-400"
+        <motion.span
+          className="text-2xl"
+          style={{ display: "inline-block" }}
+          animate={{ rotate: -360 }}
+          transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
         >
-          <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor" />
-          <motion.path
-            d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-          />
-        </motion.svg>
+          💸
+        </motion.span>
       </div>
     </div>
   </div>
@@ -84,6 +72,7 @@ export function AdminDashboard() {
   const [editingWebsite, setEditingWebsite] = useState<Website | null>(null)
   const [editingSection, setEditingSection] = useState<Section | null>(null)
   const [draggedSection, setDraggedSection] = useState<Section | null>(null)
+  const [draggedWebsite, setDraggedWebsite] = useState<Website | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -378,19 +367,19 @@ export function AdminDashboard() {
     }
   }
 
-  // 拖拽排序功能
-  const handleDragStart = (e: React.DragEvent, section: Section) => {
+  // 分区拖拽排序功能
+  const handleSectionDragStart = (e: React.DragEvent, section: Section) => {
     setDraggedSection(section)
     e.dataTransfer.effectAllowed = "move"
     e.dataTransfer.setData("text/html", "")
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleSectionDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
   }
 
-  const handleDrop = async (e: React.DragEvent, targetSection: Section) => {
+  const handleSectionDrop = async (e: React.DragEvent, targetSection: Section) => {
     e.preventDefault()
 
     if (!draggedSection || draggedSection.id === targetSection.id) {
@@ -451,8 +440,89 @@ export function AdminDashboard() {
     }
   }
 
-  const handleDragEnd = () => {
+  const handleSectionDragEnd = () => {
     setDraggedSection(null)
+  }
+
+  // 网站拖拽排序功能
+  const handleWebsiteDragStart = (e: React.DragEvent, website: Website) => {
+    setDraggedWebsite(website)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/html", "")
+  }
+
+  const handleWebsiteDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleWebsiteDrop = async (e: React.DragEvent, targetWebsite: Website) => {
+    e.preventDefault()
+
+    if (!draggedWebsite || draggedWebsite.id === targetWebsite.id || draggedWebsite.section !== targetWebsite.section) {
+      setDraggedWebsite(null)
+      return
+    }
+
+    try {
+      // 获取同一分区的网站并按排序值排列
+      const sectionWebsites = websites
+        .filter((w) => w.section === draggedWebsite.section)
+        .sort((a, b) => a.sort_order - b.sort_order)
+
+      const draggedIndex = sectionWebsites.findIndex((w) => w.id === draggedWebsite.id)
+      const targetIndex = sectionWebsites.findIndex((w) => w.id === targetWebsite.id)
+
+      // 创建新的排序数组
+      const newSortedWebsites = [...sectionWebsites]
+      const [removed] = newSortedWebsites.splice(draggedIndex, 1)
+      newSortedWebsites.splice(targetIndex, 0, removed)
+
+      // 生成新的排序值
+      const updateData = newSortedWebsites.map((website, index) => ({
+        id: website.id,
+        sortOrder: index + 1,
+      }))
+
+      const response = await fetch("/api/admin/websites/order", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ websites: updateData }),
+      })
+
+      if (response.ok) {
+        // 更新本地状态
+        setWebsites((prevWebsites) => {
+          const updatedWebsites = prevWebsites.map((website) => {
+            const update = updateData.find((u) => u.id === website.id)
+            return update ? { ...website, sort_order: update.sortOrder } : website
+          })
+          return updatedWebsites
+        })
+
+        toast({
+          title: "排序更新成功",
+          description: `网站 "${draggedWebsite.name}" 已移动`,
+        })
+      } else {
+        throw new Error("更新排序失败")
+      }
+    } catch (error) {
+      console.error("更新排序失败:", error)
+      toast({
+        title: "更新失败",
+        description: "请检查网络连接后重试",
+        variant: "destructive",
+      })
+    } finally {
+      setDraggedWebsite(null)
+    }
+  }
+
+  const handleWebsiteDragEnd = () => {
+    setDraggedWebsite(null)
   }
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -531,7 +601,9 @@ export function AdminDashboard() {
     sortedSections.forEach((section) => {
       websitesBySection[section.key] = {
         section,
-        websites: websites.filter((website) => website.section === section.key),
+        websites: websites
+          .filter((website) => website.section === section.key)
+          .sort((a, b) => a.sort_order - b.sort_order),
       }
     })
 
@@ -549,7 +621,7 @@ export function AdminDashboard() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* 页面标题 */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
             管理后台
           </h1>
           <p className="text-slate-600 dark:text-slate-400">管理网站内容和分区设置</p>
@@ -579,11 +651,11 @@ export function AdminDashboard() {
             >
               <div>
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">网站管理</h2>
-                <p className="text-slate-600 dark:text-slate-400">管理导航网站的内容和信息</p>
+                <p className="text-slate-600 dark:text-slate-400">管理导航网站的内容和信息 - 拖拽卡片可调整排序</p>
               </div>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
                     <Plus className="w-4 h-4 mr-2" />
                     添加网站
                   </Button>
@@ -704,7 +776,7 @@ export function AdminDashboard() {
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-blue-200 dark:border-slate-600"
+                            className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-orange-200 dark:border-slate-600"
                           >
                             <img
                               src={logoPreview || "/placeholder.svg"}
@@ -720,7 +792,7 @@ export function AdminDashboard() {
                     <div className="flex gap-3 pt-4">
                       <Button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
                       >
                         {editingWebsite ? "更新网站" : "创建网站"}
                       </Button>
@@ -762,9 +834,19 @@ export function AdminDashboard() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
                           whileHover={{ y: -4, scale: 1.02 }}
-                          className="h-full"
+                          className={`h-full cursor-move ${draggedWebsite?.id === website.id ? "opacity-50" : ""}`}
+                          draggable
+                          onDragStart={(e) => handleWebsiteDragStart(e, website)}
+                          onDragOver={handleWebsiteDragOver}
+                          onDrop={(e) => handleWebsiteDrop(e, website)}
+                          onDragEnd={handleWebsiteDragEnd}
                         >
-                          <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col">
+                          <Card className="h-full group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm flex flex-col relative">
+                            {/* 拖拽指示器 */}
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <GripVertical className="w-4 h-4 text-slate-400" />
+                            </div>
+
                             <CardHeader className="pb-3 flex-shrink-0">
                               <div className="flex items-start gap-3">
                                 <motion.div
@@ -785,7 +867,7 @@ export function AdminDashboard() {
                                   )}
                                 </motion.div>
                                 <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1 mb-2">
+                                  <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors line-clamp-1 mb-2">
                                     {website.name}
                                   </CardTitle>
                                   <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
@@ -851,7 +933,7 @@ export function AdminDashboard() {
                 <p className="text-slate-500 dark:text-slate-400 mb-6">开始添加您的第一个网站吧</p>
                 <Button
                   onClick={() => setDialogOpen(true)}
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   添加第一个网站
@@ -945,11 +1027,11 @@ export function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl border border-blue-200 dark:border-slate-600"
+              className="bg-gradient-to-r from-orange-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 p-4 rounded-xl border border-orange-200 dark:border-slate-600"
             >
               <div className="flex items-center gap-3">
-                <GripVertical className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <p className="text-sm text-blue-700 dark:text-blue-300">
+                <GripVertical className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <p className="text-sm text-orange-700 dark:text-orange-300">
                   <span className="font-medium">拖拽排序：</span>
                   按住分区卡片拖拽到目标位置即可调整显示顺序
                 </p>
@@ -968,10 +1050,10 @@ export function AdminDashboard() {
                     whileHover={{ y: -4, scale: 1.02 }}
                     className={`cursor-move ${draggedSection?.id === section.id ? "opacity-50" : ""}`}
                     draggable
-                    onDragStart={(e) => handleDragStart(e, section)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, section)}
-                    onDragEnd={handleDragEnd}
+                    onDragStart={(e) => handleSectionDragStart(e, section)}
+                    onDragOver={handleSectionDragOver}
+                    onDrop={(e) => handleSectionDrop(e, section)}
+                    onDragEnd={handleSectionDragEnd}
                   >
                     <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm relative">
                       {/* 拖拽指示器 */}
@@ -989,7 +1071,7 @@ export function AdminDashboard() {
                             {section.icon}
                           </motion.div>
                           <div className="flex-1">
-                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                               {section.title}
                             </CardTitle>
                             <div className="space-y-1 mt-2">
