@@ -7,6 +7,9 @@ if (!process.env.DATABASE_URL) {
 // 创建数据库连接
 export const sql = neon(process.env.DATABASE_URL)
 
+// 导出查询函数
+export const query = sql
+
 // 数据库操作函数
 export interface DatabaseWebsite {
   id: number
@@ -31,6 +34,29 @@ export interface DatabaseSection {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+// 数据库连接测试函数
+export async function testConnection() {
+  try {
+    const result = await sql`SELECT 1 as test`
+    console.log("数据库连接成功:", result)
+    return true
+  } catch (error) {
+    console.error("数据库连接失败:", error)
+    return false
+  }
+}
+
+// 获取数据库版本信息
+export async function getDatabaseInfo() {
+  try {
+    const result = await sql`SELECT version()`
+    return result[0]
+  } catch (error) {
+    console.error("获取数据库信息失败:", error)
+    return null
+  }
 }
 
 // 获取所有网站

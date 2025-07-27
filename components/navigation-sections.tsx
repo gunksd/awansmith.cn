@@ -2,104 +2,161 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { WebsiteCard } from "@/components/website-card"
-import type { Website } from "@/lib/types"
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { WebsiteCard } from "./website-card"
+import type { Section, Website } from "@/lib/types"
 
-export function NavigationSections() {
-  const [websiteData, setWebsiteData] = useState<Record<string, Website[]>>({})
-  const [sectionTitles, setSectionTitles] = useState<Record<string, string>>({})
+interface NavigationSectionsProps {
+  className?: string
+}
+
+export function NavigationSections({ className }: NavigationSectionsProps) {
+  const [sections, setSections] = useState<Section[]>([])
+  const [websites, setWebsites] = useState<Website[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true)
+  const loadData = async () => {
+    try {
+      console.log("开始加载数据...")
+      setLoading(true)
+      setError(null)
 
-        // 并行获取网站数据和分区信息
-        const [websitesResponse, sectionsResponse] = await Promise.all([fetch("/api/websites"), fetch("/api/sections")])
+      // 并行获取分区和网站数据
+      const [sectionsResponse, websitesResponse] = await Promise.all([fetch("/api/sections"), fetch("/api/websites")])
 
-        if (!websitesResponse.ok || !sectionsResponse.ok) {
-          throw new Error("获取数据失败")
-        }
-
-        const [websites, sections] = await Promise.all([websitesResponse.json(), sectionsResponse.json()])
-
-        console.log("获取到的网站数据:", websites)
-        console.log("获取到的分区数据:", sections)
-
-        setWebsiteData(websites)
-        setSectionTitles(sections)
-        setError(null)
-      } catch (error) {
-        console.error("加载数据失败:", error)
-        setError("加载数据失败，请刷新页面重试")
-      } finally {
-        setLoading(false)
+      if (!sectionsResponse.ok) {
+        const errorData = await sectionsResponse.json()
+        throw new Error(errorData.error || "获取分区失败")
       }
-    }
 
+      if (!websitesResponse.ok) {
+        const errorData = await websitesResponse.json()
+        throw new Error(errorData.error || "获取网站失败")
+      }
+
+      const sectionsData = await sectionsResponse.json()
+      const websitesData = await websitesResponse.json()
+
+      console.log("分区数据:", sectionsData)
+      console.log("网站数据:", websitesData)
+
+      // 验证数据格式
+      if (!Array.isArray(sectionsData)) {
+        throw new Error("分区数据格式错误")
+      }
+
+      if (!Array.isArray(websitesData)) {
+        throw new Error("网站数据格式错误")
+      }
+
+      setSections(sectionsData)
+      setWebsites(websitesData)
+      console.log("数据加载成功:", { sections: sectionsData.length, websites: websitesData.length })
+    } catch (error) {
+      console.error("加载数据失败:", error)
+      setError(error instanceof Error ? error.message : "未知错误")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     loadData()
   }, [])
 
+  // 加载状态
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">加载中...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+        >
+          <Loader2 className="w-8 h-8 text-blue-600" />
+        </motion.div>
+        <p className="text-slate-600 dark:text-slate-400">正在加载数据...</p>
       </div>
     )
   }
 
+  // 错误状态
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            重新加载
-          </button>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">加载失败</h3>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md">{error}</p>
         </div>
+        <Button onClick={loadData} variant="outline" className="mt-4 bg-transparent">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          重试
+        </Button>
+      </div>
+    )
+  }
+
+  // 空数据状态
+  if (sections.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">暂无数据</h3>
+          <p className="text-slate-600 dark:text-slate-400">还没有添加任何分区</p>
+        </div>
+        <Button onClick={loadData} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          刷新
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      {Object.entries(sectionTitles).map(([sectionKey, title]) => {
-        const sites = websiteData[sectionKey] || []
+    <div className={className}>
+      {sections.map((section, sectionIndex) => {
+        // 使用section.key来匹配网站的section字段
+        const sectionWebsites = websites.filter((website) => website.section === section.key)
 
-        if (sites.length === 0) return null
+        if (sectionWebsites.length === 0) {
+          return null
+        }
 
         return (
           <motion.section
-            key={sectionKey}
-            initial={{ opacity: 0, y: 20 }}
+            key={section.id}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-4"
+            transition={{ delay: sectionIndex * 0.1, duration: 0.6 }}
+            className="mb-12"
           >
-            <div className="flex items-center gap-4">
-              <h2 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-slate-200">{title}</h2>
-              <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600"></div>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{sites.length} 个</span>
+            {/* 分区标题 */}
+            <div className="flex items-center gap-4 mb-6">
+              {/* 分区图标 - 添加旋转效果 */}
+              <motion.div
+                whileHover={{ rotate: 360, scale: 1.1 }}
+                transition={{ duration: 0.5 }}
+                className="text-3xl p-3 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-600"
+              >
+                {section.icon}
+              </motion.div>
+
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-1">{section.title}</h2>
+                <div className="h-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-full w-20"></div>
+              </div>
+
+              <div className="text-sm text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
+                {sectionWebsites.length} 个网站
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 auto-rows-fr">
-              {sites.map((site, index) => (
-                <motion.div
-                  key={site.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <WebsiteCard website={site} />
-                </motion.div>
+            {/* 网站网格 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sectionWebsites.map((website, websiteIndex) => (
+                <WebsiteCard key={website.id} website={website} index={websiteIndex} />
               ))}
             </div>
           </motion.section>

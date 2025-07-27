@@ -1,45 +1,45 @@
 import { NextResponse } from "next/server"
-import { getAllWebsites, getActiveSections } from "@/lib/database"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const [websites, sections] = await Promise.all([getAllWebsites(), getActiveSections()])
+    console.log("[SERVER] 开始获取网站数据...")
 
-    // 创建分区映射
-    const sectionMap = sections.reduce(
-      (acc, section) => {
-        acc[section.key] = section
-        return acc
-      },
-      {} as Record<string, any>,
-    )
+    // 使用正确的字段名：section而不是section_id
+    const websites = await sql`
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo,
+        section,
+        sort_order,
+        created_at,
+        updated_at
+      FROM websites 
+      ORDER BY sort_order ASC, created_at DESC
+    `
 
-    // 按分区组织数据，只包含活跃分区
-    const websiteData: Record<string, any[]> = {}
+    // 转换数据格式，确保字段名一致
+    const formattedWebsites = websites.map((website: any) => ({
+      id: website.id.toString(),
+      name: website.name,
+      description: website.description,
+      url: website.url,
+      tags: Array.isArray(website.tags) ? website.tags : [],
+      customLogo: website.custom_logo, // 转换字段名
+      section: website.section,
+      sort_order: website.sort_order,
+    }))
 
-    // 初始化所有活跃分区
-    sections.forEach((section) => {
-      websiteData[section.key] = []
-    })
-
-    // 分配网站到对应分区
-    websites.forEach((site) => {
-      if (websiteData[site.section]) {
-        const websiteItem = {
-          id: site.id.toString(),
-          name: site.name,
-          description: site.description,
-          url: site.url,
-          tags: site.tags || [],
-          customLogo: site.custom_logo,
-        }
-        websiteData[site.section].push(websiteItem)
-      }
-    })
-
-    return NextResponse.json(websiteData)
+    console.log(`[SERVER] 成功获取 ${formattedWebsites.length} 个网站`)
+    return NextResponse.json(formattedWebsites)
   } catch (error) {
-    console.error("获取网站数据失败:", error)
-    return NextResponse.json({ error: "获取数据失败" }, { status: 500 })
+    console.error("[SERVER] 获取网站失败:", error)
+    return NextResponse.json({ error: "获取网站失败: " + (error as Error).message }, { status: 500 })
   }
 }

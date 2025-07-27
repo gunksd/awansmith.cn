@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit, Trash2, Upload, X, Settings, GripVertical } from "lucide-react"
+import { Plus, Edit, Trash2, Upload, X, Settings, GripVertical, LogOut, Key } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface Website {
   id: number
@@ -88,6 +89,14 @@ export function AdminDashboard() {
   })
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const { toast } = useToast()
+  const router = useRouter()
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false)
+  const [passwordFormData, setPasswordFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+    newUsername: "",
+  })
 
   useEffect(() => {
     loadData()
@@ -578,14 +587,34 @@ export function AdminDashboard() {
     setEditingSection(null)
   }
 
+  const resetPasswordForm = () => {
+    setPasswordFormData({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      newUsername: "",
+    })
+  }
+
   const handleDialogClose = () => {
     setDialogOpen(false)
-    resetForm()
+    setTimeout(() => {
+      resetForm()
+    }, 100)
   }
 
   const handleSectionDialogClose = () => {
     setSectionDialogOpen(false)
-    resetSectionForm()
+    setTimeout(() => {
+      resetSectionForm()
+    }, 100)
+  }
+
+  const handlePasswordDialogClose = () => {
+    setChangePasswordDialogOpen(false)
+    setTimeout(() => {
+      resetPasswordForm()
+    }, 100)
   }
 
   const getSectionTitle = (sectionKey: string) => {
@@ -610,6 +639,91 @@ export function AdminDashboard() {
     return websitesBySection
   }
 
+  // 登出功能
+  const handleLogout = async () => {
+    if (!confirm("确定要退出登录吗？")) return
+
+    try {
+      const response = await fetch("/api/admin/logout", {
+        method: "POST",
+      })
+
+      if (response.ok) {
+        toast({
+          title: "退出成功",
+          description: "已安全退出管理后台",
+        })
+        router.push("/admin/login")
+      } else {
+        throw new Error("退出失败")
+      }
+    } catch (error) {
+      console.error("退出失败:", error)
+      toast({
+        title: "退出失败",
+        description: "请刷新页面重试",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // 修改密码功能
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      toast({
+        title: "密码不匹配",
+        description: "新密码和确认密码不一致",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (passwordFormData.newPassword.length < 6) {
+      toast({
+        title: "密码太短",
+        description: "新密码至少需要6个字符",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch("/api/admin/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword: passwordFormData.currentPassword,
+          newPassword: passwordFormData.newPassword,
+          newUsername: passwordFormData.newUsername || undefined,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: "修改成功",
+          description: data.message,
+        })
+        setChangePasswordDialogOpen(false)
+        resetPasswordForm()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "修改失败")
+      }
+    } catch (error) {
+      console.error("修改失败:", error)
+      toast({
+        title: "修改失败",
+        description: error.message || "请检查网络连接后重试",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (loading) {
     return <LoadingSpinner />
   }
@@ -620,11 +734,114 @@ export function AdminDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* 页面标题 */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-            管理后台
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">管理网站内容和分区设置</p>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+              管理后台
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">管理网站内容和分区设置</p>
+          </div>
+
+          {/* 管理操作按钮 */}
+          <div className="flex items-center gap-2">
+            <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm">
+                  <Key className="w-4 h-4 mr-2" />
+                  修改密码
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold">修改管理员信息</DialogTitle>
+                </DialogHeader>
+
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                      新用户名（可选）
+                    </label>
+                    <Input
+                      type="text"
+                      value={passwordFormData.newUsername}
+                      onChange={(e) => setPasswordFormData((prev) => ({ ...prev, newUsername: e.target.value }))}
+                      placeholder="留空则不修改用户名"
+                      className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                      当前密码 <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordFormData.currentPassword}
+                      onChange={(e) => setPasswordFormData((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                      placeholder="请输入当前密码"
+                      className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                      新密码 <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordFormData.newPassword}
+                      onChange={(e) => setPasswordFormData((prev) => ({ ...prev, newPassword: e.target.value }))}
+                      placeholder="请输入新密码（至少6位）"
+                      className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                      确认新密码 <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordFormData.confirmPassword}
+                      onChange={(e) => setPasswordFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder="请再次输入新密码"
+                      className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                    >
+                      确认修改
+                    </Button>
+                    <Button type="button" variant="outline" onClick={handlePasswordDialogClose}>
+                      取消
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              退出登录
+            </Button>
+          </div>
         </motion.div>
 
         {/* 标签页 */}

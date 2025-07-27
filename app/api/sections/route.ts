@@ -1,22 +1,32 @@
 import { NextResponse } from "next/server"
-import { getActiveSections } from "@/lib/database"
+import { neon } from "@neondatabase/serverless"
+
+const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET() {
   try {
-    const sections = await getActiveSections()
+    console.log("[SERVER] 开始获取分区数据...")
 
-    // 转换为前端需要的格式
-    const sectionMap = sections.reduce(
-      (acc, section) => {
-        acc[section.key] = `${section.icon} ${section.title}`
-        return acc
-      },
-      {} as Record<string, string>,
-    )
+    // 使用正确的字段名：key, title而不是name, description
+    const sections = await sql`
+      SELECT 
+        id,
+        key,
+        title,
+        icon,
+        sort_order,
+        is_active,
+        created_at,
+        updated_at
+      FROM sections 
+      WHERE is_active = true
+      ORDER BY sort_order ASC
+    `
 
-    return NextResponse.json(sectionMap)
+    console.log(`[SERVER] 成功获取 ${sections.length} 个分区`)
+    return NextResponse.json(sections)
   } catch (error) {
-    console.error("获取分区数据失败:", error)
-    return NextResponse.json({ error: "获取数据失败" }, { status: 500 })
+    console.error("[SERVER] 获取分区失败:", error)
+    return NextResponse.json({ error: "获取分区失败: " + (error as Error).message }, { status: 500 })
   }
 }

@@ -1,34 +1,64 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { sign } from "jsonwebtoken"
+import bcrypt from "bcryptjs"
+import { query } from "@/lib/database"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
-const ADMIN_USERNAME = "awan"
-const ADMIN_PASSWORD = "awansmith123"
 
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json()
 
-    // 验证用户名和密码
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      // 生成JWT token
-      const token = sign({ username, role: "admin" }, JWT_SECRET, { expiresIn: "24h" })
+    if (!username || !password) {
+      return NextResponse.json({ error: "用户名和密码不能为空" }, { status: 400 })
+    }
 
-      // 设置cookie
-      const cookieStore = await cookies()
-      cookieStore.set("admin-token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60, // 24小时
-      })
+    // 从数据库查询管理员用户
+    const result = await query("SELECT id, username, password_hash FROM admin_users WHERE username = $1", [username])
 
-      return NextResponse.json({ success: true })
-    } else {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
     }
+
+    const admin = result.rows[0]
+
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(password, admin.password_hash)
+
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
+    }
+
+    // 生成JWT token
+    const token = sign(
+      {
+        id: admin.id,
+        username: admin.username,
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" },
+    )
+
+    // 设置cookie
+    const cookieStore = await cookies()
+    cookieStore.set("admin-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60, // 24小时
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: "登录成功",
+      user: {
+        id: admin.id,
+        username: admin.username,
+      },
+    })
   } catch (error) {
-    return NextResponse.json({ error: "登录失败" }, { status: 500 })
+    console.error("登录失败:", error)
+    return NextResponse.json({ error: "登录失败，请重试" }, { status: 500 })
   }
 }

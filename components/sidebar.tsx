@@ -32,6 +32,7 @@ function CopyButton({ address, type }: { address: string; type: string }) {
           title: "复制成功",
           description: `${type}地址已复制到剪贴板`,
           duration: 2000,
+          className: "z-[10000]", // 添加更高的z-index
         })
 
         // 清除之前的定时器
@@ -49,6 +50,7 @@ function CopyButton({ address, type }: { address: string; type: string }) {
           description: "请手动复制地址",
           variant: "destructive",
           duration: 2000,
+          className: "z-[10000]", // 添加更高的z-index
         })
       }
     },

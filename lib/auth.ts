@@ -18,3 +18,22 @@ export async function checkAuth(): Promise<boolean> {
     return false
   }
 }
+
+export async function getCurrentUser(): Promise<{ id: number; username: string } | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("admin-token")?.value
+
+    if (!token) {
+      return null
+    }
+
+    const decoded = verify(token, JWT_SECRET) as any
+    return {
+      id: decoded.id,
+      username: decoded.username,
+    }
+  } catch (error) {
+    return null
+  }
+}
