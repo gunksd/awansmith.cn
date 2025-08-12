@@ -1,46 +1,17 @@
 import { neon } from "@neondatabase/serverless"
-
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set")
-}
+import type { Section, Website, Admin } from "./types"
 
 // 创建数据库连接
-export const sql = neon(process.env.DATABASE_URL)
+const sql = neon(process.env.DATABASE_URL!)
 
-// 导出查询函数
+// 导出query函数以兼容旧代码
 export const query = sql
 
-// 数据库操作函数
-export interface DatabaseWebsite {
-  id: number
-  name: string
-  description: string
-  url: string
-  tags: string[]
-  custom_logo: string | null
-  section: string
-  sort_order: number
-  created_at: string
-  updated_at: string
-}
-
-// 分区接口
-export interface DatabaseSection {
-  id: number
-  key: string
-  title: string
-  icon: string
-  sort_order: number
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-// 数据库连接测试函数
+// 测试数据库连接
 export async function testConnection() {
   try {
-    const result = await sql`SELECT 1 as test`
-    console.log("数据库连接成功:", result)
+    const result = await sql`SELECT NOW() as current_time`
+    console.log("数据库连接成功:", result[0])
     return true
   } catch (error) {
     console.error("数据库连接失败:", error)
@@ -49,171 +20,63 @@ export async function testConnection() {
 }
 
 // 获取数据库版本信息
-export async function getDatabaseInfo() {
+export async function getDatabaseVersion() {
   try {
     const result = await sql`SELECT version()`
-    return result[0]
+    return result[0].version
   } catch (error) {
-    console.error("获取数据库信息失败:", error)
-    return null
+    console.error("获取数据库版本失败:", error)
+    throw error
   }
 }
 
-// 获取所有网站
-export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
-  try {
-    const websites = await sql`
-      SELECT * FROM websites 
-      ORDER BY section, sort_order ASC, created_at DESC
-    `
-    return websites as DatabaseWebsite[]
-  } catch (error) {
-    console.error("获取网站数据失败:", error)
-    throw new Error("获取网站数据失败")
-  }
-}
-
-// 根据分区获取网站
-export async function getWebsitesBySection(section: string): Promise<DatabaseWebsite[]> {
-  try {
-    const websites = await sql`
-      SELECT * FROM websites 
-      WHERE section = ${section}
-      ORDER BY sort_order ASC, created_at DESC
-    `
-    return websites as DatabaseWebsite[]
-  } catch (error) {
-    console.error("获取分区网站数据失败:", error)
-    throw new Error("获取分区网站数据失败")
-  }
-}
-
-// 添加网站
-export async function createWebsite(data: {
-  name: string
-  description: string
-  url: string
-  tags: string[]
-  customLogo?: string
-  section: string
-}): Promise<DatabaseWebsite> {
-  try {
-    // 获取该分区的最大排序值
-    const maxOrder = await sql`
-      SELECT COALESCE(MAX(sort_order), 0) as max_order 
-      FROM websites 
-      WHERE section = ${data.section}
-    `
-    const nextOrder = maxOrder[0].max_order + 1
-
-    const result = await sql`
-      INSERT INTO websites (name, description, url, tags, custom_logo, section, sort_order)
-      VALUES (${data.name}, ${data.description}, ${data.url}, ${data.tags}, ${data.customLogo || null}, ${data.section}, ${nextOrder})
-      RETURNING *
-    `
-    return result[0] as DatabaseWebsite
-  } catch (error) {
-    console.error("创建网站失败:", error)
-    throw new Error("创建网站失败")
-  }
-}
-
-// 更新网站
-export async function updateWebsite(
-  id: number,
-  data: {
-    name?: string
-    description?: string
-    url?: string
-    tags?: string[]
-    customLogo?: string
-    section?: string
-  },
-): Promise<DatabaseWebsite> {
-  try {
-    const result = await sql`
-      UPDATE websites 
-      SET 
-        name = COALESCE(${data.name}, name),
-        description = COALESCE(${data.description}, description),
-        url = COALESCE(${data.url}, url),
-        tags = COALESCE(${data.tags}, tags),
-        custom_logo = COALESCE(${data.customLogo}, custom_logo),
-        section = COALESCE(${data.section}, section),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${id}
-      RETURNING *
-    `
-    if (result.length === 0) {
-      throw new Error("网站不存在")
-    }
-    return result[0] as DatabaseWebsite
-  } catch (error) {
-    console.error("更新网站失败:", error)
-    throw new Error("更新网站失败")
-  }
-}
-
-// 删除网站
-export async function deleteWebsite(id: number): Promise<boolean> {
-  try {
-    const result = await sql`
-      DELETE FROM websites WHERE id = ${id}
-      RETURNING id
-    `
-    return result.length > 0
-  } catch (error) {
-    console.error("删除网站失败:", error)
-    throw new Error("删除网站失败")
-  }
-}
-
-// 批量更新网站排序
-export async function updateWebsitesOrder(websites: { id: number; sortOrder: number }[]): Promise<boolean> {
-  try {
-    // 使用事务批量更新
-    for (const website of websites) {
-      await sql`
-        UPDATE websites 
-        SET sort_order = ${website.sortOrder}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${website.id}
-      `
-    }
-    return true
-  } catch (error) {
-    console.error("更新网站排序失败:", error)
-    throw new Error("更新网站排序失败")
-  }
-}
-
-// ===== 分区管理相关函数 =====
+// ==================== 分区相关操作 ====================
 
 // 获取所有分区
-export async function getAllSections(): Promise<DatabaseSection[]> {
+export async function getSections(): Promise<Section[]> {
   try {
-    const sections = await sql`
-      SELECT * FROM sections 
-      ORDER BY sort_order ASC, created_at ASC
+    const result = await sql`
+      SELECT 
+        id,
+        key,
+        title,
+        icon,
+        sort_order as "sortOrder",
+        is_active as "isActive"
+      FROM sections 
+      WHERE is_active = true 
+      ORDER BY sort_order ASC, id ASC
     `
-    return sections as DatabaseSection[]
+    return result as Section[]
   } catch (error) {
-    console.error("获取分区数据失败:", error)
-    throw new Error("获取分区数据失败")
+    console.error("获取分区失败:", error)
+    throw error
   }
 }
 
-// 获取活跃分区
-export async function getActiveSections(): Promise<DatabaseSection[]> {
+// 兼容旧函数名
+export async function getAllSections(): Promise<Section[]> {
+  return getSections()
+}
+
+// 根据key获取分区
+export async function getSectionByKey(key: string): Promise<Section | null> {
   try {
-    const sections = await sql`
-      SELECT * FROM sections 
-      WHERE is_active = true
-      ORDER BY sort_order ASC, created_at ASC
+    const result = await sql`
+      SELECT 
+        id,
+        key,
+        title,
+        icon,
+        sort_order as "sortOrder",
+        is_active as "isActive"
+      FROM sections 
+      WHERE key = ${key} AND is_active = true
     `
-    return sections as DatabaseSection[]
+    return (result[0] as Section) || null
   } catch (error) {
-    console.error("获取活跃分区数据失败:", error)
-    throw new Error("获取活跃分区数据失败")
+    console.error("获取分区失败:", error)
+    throw error
   }
 }
 
@@ -223,26 +86,29 @@ export async function createSection(data: {
   title: string
   icon?: string
   sortOrder?: number
-}): Promise<DatabaseSection> {
+}): Promise<Section> {
   try {
-    // 获取最大排序值
-    const maxOrder = await sql`
-      SELECT COALESCE(MAX(sort_order), 0) as max_order FROM sections
-    `
-    const nextOrder = data.sortOrder || maxOrder[0].max_order + 1
-
     const result = await sql`
-      INSERT INTO sections (key, title, icon, sort_order)
-      VALUES (${data.key}, ${data.title}, ${data.icon || "📁"}, ${nextOrder})
-      RETURNING *
+      INSERT INTO sections (key, title, icon, sort_order, is_active)
+      VALUES (
+        ${data.key},
+        ${data.title},
+        ${data.icon || "📁"},
+        ${data.sortOrder || 0},
+        true
+      )
+      RETURNING 
+        id,
+        key,
+        title,
+        icon,
+        sort_order as "sortOrder",
+        is_active as "isActive"
     `
-    return result[0] as DatabaseSection
+    return result[0] as Section
   } catch (error) {
     console.error("创建分区失败:", error)
-    if (error.message?.includes("duplicate key")) {
-      throw new Error("分区标识已存在")
-    }
-    throw new Error("创建分区失败")
+    throw error
   }
 }
 
@@ -256,69 +122,419 @@ export async function updateSection(
     sortOrder?: number
     isActive?: boolean
   },
-): Promise<DatabaseSection> {
+): Promise<Section> {
   try {
+    const updates = []
+    const values = []
+
+    if (data.key !== undefined) {
+      updates.push(`key = $${updates.length + 1}`)
+      values.push(data.key)
+    }
+    if (data.title !== undefined) {
+      updates.push(`title = $${updates.length + 1}`)
+      values.push(data.title)
+    }
+    if (data.icon !== undefined) {
+      updates.push(`icon = $${updates.length + 1}`)
+      values.push(data.icon)
+    }
+    if (data.sortOrder !== undefined) {
+      updates.push(`sort_order = $${updates.length + 1}`)
+      values.push(data.sortOrder)
+    }
+    if (data.isActive !== undefined) {
+      updates.push(`is_active = $${updates.length + 1}`)
+      values.push(data.isActive)
+    }
+
+    if (updates.length === 0) {
+      throw new Error("没有要更新的字段")
+    }
+
     const result = await sql`
       UPDATE sections 
-      SET 
-        key = COALESCE(${data.key}, key),
-        title = COALESCE(${data.title}, title),
-        icon = COALESCE(${data.icon}, icon),
-        sort_order = COALESCE(${data.sortOrder}, sort_order),
-        is_active = COALESCE(${data.isActive}, is_active),
-        updated_at = CURRENT_TIMESTAMP
+      SET ${sql.unsafe(updates.join(", "))}
       WHERE id = ${id}
-      RETURNING *
+      RETURNING 
+        id,
+        key,
+        title,
+        icon,
+        sort_order as "sortOrder",
+        is_active as "isActive"
     `
-    if (result.length === 0) {
-      throw new Error("分区不存在")
-    }
-    return result[0] as DatabaseSection
+
+    return result[0] as Section
   } catch (error) {
     console.error("更新分区失败:", error)
-    throw new Error("更新分区失败")
+    throw error
   }
 }
 
 // 删除分区
 export async function deleteSection(id: number): Promise<boolean> {
   try {
-    // 检查是否有网站使用此分区
-    const websites = await sql`
-      SELECT COUNT(*) as count FROM websites w
-      JOIN sections s ON w.section = s.key
-      WHERE s.id = ${id}
-    `
-
-    if (websites[0].count > 0) {
-      throw new Error("该分区下还有网站，无法删除")
-    }
-
     const result = await sql`
       DELETE FROM sections WHERE id = ${id}
-      RETURNING id
     `
-    return result.length > 0
+    return result.count > 0
   } catch (error) {
     console.error("删除分区失败:", error)
-    throw new Error(error.message || "删除分区失败")
+    throw error
   }
 }
 
-// 批量更新分区排序
-export async function updateSectionsOrder(sections: { id: number; sortOrder: number }[]): Promise<boolean> {
+// 更新分区排序
+export async function updateSectionsOrder(updates: { id: number; sortOrder: number }[]): Promise<boolean> {
   try {
-    // 使用事务批量更新
-    for (const section of sections) {
+    for (const update of updates) {
       await sql`
         UPDATE sections 
-        SET sort_order = ${section.sortOrder}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${section.id}
+        SET sort_order = ${update.sortOrder}
+        WHERE id = ${update.id}
       `
     }
     return true
   } catch (error) {
     console.error("更新分区排序失败:", error)
-    throw new Error("更新分区排序失败")
+    throw error
+  }
+}
+
+// ==================== 网站相关操作 ====================
+
+// 获取所有网站
+export async function getWebsites(): Promise<Website[]> {
+  try {
+    const result = await sql`
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+      FROM websites 
+      ORDER BY sort_order ASC, id ASC
+    `
+    return result as Website[]
+  } catch (error) {
+    console.error("获取网站失败:", error)
+    throw error
+  }
+}
+
+// 兼容旧函数名
+export async function getAllWebsites(): Promise<Website[]> {
+  return getWebsites()
+}
+
+// 根据分区获取网站
+export async function getWebsitesBySection(section: string): Promise<Website[]> {
+  try {
+    const result = await sql`
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+      FROM websites 
+      WHERE section = ${section}
+      ORDER BY sort_order ASC, id ASC
+    `
+    return result as Website[]
+  } catch (error) {
+    console.error("获取网站失败:", error)
+    throw error
+  }
+}
+
+// 根据ID获取网站
+export async function getWebsiteById(id: number): Promise<Website | null> {
+  try {
+    const result = await sql`
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+      FROM websites 
+      WHERE id = ${id}
+    `
+    return (result[0] as Website) || null
+  } catch (error) {
+    console.error("获取网站失败:", error)
+    throw error
+  }
+}
+
+// 创建网站
+export async function createWebsite(data: {
+  name: string
+  description?: string
+  url: string
+  tags?: string
+  customLogo?: string
+  section: string
+  sortOrder?: number
+}): Promise<Website> {
+  try {
+    const result = await sql`
+      INSERT INTO websites (name, description, url, tags, custom_logo, section, sort_order)
+      VALUES (
+        ${data.name},
+        ${data.description || null},
+        ${data.url},
+        ${data.tags || null},
+        ${data.customLogo || null},
+        ${data.section},
+        ${data.sortOrder || 0}
+      )
+      RETURNING 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+    `
+    return result[0] as Website
+  } catch (error) {
+    console.error("创建网站失败:", error)
+    throw error
+  }
+}
+
+// 更新网站
+export async function updateWebsite(
+  id: number,
+  data: {
+    name?: string
+    description?: string
+    url?: string
+    tags?: string
+    customLogo?: string
+    section?: string
+    sortOrder?: number
+  },
+): Promise<Website> {
+  try {
+    const updates = []
+    const values = []
+
+    if (data.name !== undefined) {
+      updates.push(`name = $${updates.length + 1}`)
+      values.push(data.name)
+    }
+    if (data.description !== undefined) {
+      updates.push(`description = $${updates.length + 1}`)
+      values.push(data.description)
+    }
+    if (data.url !== undefined) {
+      updates.push(`url = $${updates.length + 1}`)
+      values.push(data.url)
+    }
+    if (data.tags !== undefined) {
+      updates.push(`tags = $${updates.length + 1}`)
+      values.push(data.tags)
+    }
+    if (data.customLogo !== undefined) {
+      updates.push(`custom_logo = $${updates.length + 1}`)
+      values.push(data.customLogo)
+    }
+    if (data.section !== undefined) {
+      updates.push(`section = $${updates.length + 1}`)
+      values.push(data.section)
+    }
+    if (data.sortOrder !== undefined) {
+      updates.push(`sort_order = $${updates.length + 1}`)
+      values.push(data.sortOrder)
+    }
+
+    if (updates.length === 0) {
+      throw new Error("没有要更新的字段")
+    }
+
+    const result = await sql`
+      UPDATE websites 
+      SET ${sql.unsafe(updates.join(", "))}
+      WHERE id = ${id}
+      RETURNING 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+    `
+
+    return result[0] as Website
+  } catch (error) {
+    console.error("更新网站失败:", error)
+    throw error
+  }
+}
+
+// 删除网站
+export async function deleteWebsite(id: number): Promise<boolean> {
+  try {
+    const result = await sql`
+      DELETE FROM websites WHERE id = ${id}
+    `
+    return result.count > 0
+  } catch (error) {
+    console.error("删除网站失败:", error)
+    throw error
+  }
+}
+
+// 更新网站排序
+export async function updateWebsitesOrder(updates: { id: number; sortOrder: number }[]): Promise<boolean> {
+  try {
+    for (const update of updates) {
+      await sql`
+        UPDATE websites 
+        SET sort_order = ${update.sortOrder}
+        WHERE id = ${update.id}
+      `
+    }
+    return true
+  } catch (error) {
+    console.error("更新网站排序失败:", error)
+    throw error
+  }
+}
+
+// ==================== 管理员相关操作 ====================
+
+// 根据用户名获取管理员
+export async function getAdminByUsername(username: string): Promise<Admin | null> {
+  try {
+    const result = await sql`
+      SELECT id, username, password, created_at as "createdAt", updated_at as "updatedAt"
+      FROM admin 
+      WHERE username = ${username}
+    `
+    return (result[0] as Admin) || null
+  } catch (error) {
+    console.error("获取管理员失败:", error)
+    throw error
+  }
+}
+
+// 创建管理员
+export async function createAdmin(data: {
+  username: string
+  password: string
+}): Promise<Admin> {
+  try {
+    const result = await sql`
+      INSERT INTO admin (username, password, created_at, updated_at)
+      VALUES (
+        ${data.username},
+        ${data.password},
+        NOW(),
+        NOW()
+      )
+      RETURNING id, username, password, created_at as "createdAt", updated_at as "updatedAt"
+    `
+    return result[0] as Admin
+  } catch (error) {
+    console.error("创建管理员失败:", error)
+    throw error
+  }
+}
+
+// 更新管理员密码
+export async function updateAdminPassword(username: string, newPassword: string): Promise<boolean> {
+  try {
+    const result = await sql`
+      UPDATE admin 
+      SET password = ${newPassword}, updated_at = NOW()
+      WHERE username = ${username}
+    `
+    return result.count > 0
+  } catch (error) {
+    console.error("更新管理员密码失败:", error)
+    throw error
+  }
+}
+
+// ==================== 搜索功能 ====================
+
+// 搜索网站
+export async function searchWebsites(query: string): Promise<Website[]> {
+  try {
+    const searchTerm = `%${query}%`
+    const result = await sql`
+      SELECT 
+        id,
+        name,
+        description,
+        url,
+        tags,
+        custom_logo as "customLogo",
+        section,
+        sort_order as "sortOrder"
+      FROM websites 
+      WHERE 
+        name ILIKE ${searchTerm} OR 
+        description ILIKE ${searchTerm} OR 
+        tags ILIKE ${searchTerm}
+      ORDER BY sort_order ASC, id ASC
+    `
+    return result as Website[]
+  } catch (error) {
+    console.error("搜索网站失败:", error)
+    throw error
+  }
+}
+
+// ==================== 统计功能 ====================
+
+// 获取统计信息
+export async function getStats() {
+  try {
+    const [sectionsCount, websitesCount, websitesBySection] = await Promise.all([
+      sql`SELECT COUNT(*) as count FROM sections WHERE is_active = true`,
+      sql`SELECT COUNT(*) as count FROM websites`,
+      sql`
+        SELECT 
+          s.title as section_title,
+          COUNT(w.id) as website_count
+        FROM sections s
+        LEFT JOIN websites w ON s.key = w.section
+        WHERE s.is_active = true
+        GROUP BY s.id, s.title, s.sort_order
+        ORDER BY s.sort_order ASC
+      `,
+    ])
+
+    return {
+      totalSections: Number.parseInt(sectionsCount[0].count),
+      totalWebsites: Number.parseInt(websitesCount[0].count),
+      websitesBySection: websitesBySection.map((row) => ({
+        sectionTitle: row.section_title,
+        websiteCount: Number.parseInt(row.website_count),
+      })),
+    }
+  } catch (error) {
+    console.error("获取统计信息失败:", error)
+    throw error
   }
 }
