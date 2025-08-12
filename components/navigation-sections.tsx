@@ -1,228 +1,167 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { WebsiteCard } from "./website-card"
+import { motion } from "framer-motion"
+import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Grid, ChevronDown, ChevronUp, Loader2, AlertCircle } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { WebsiteCard } from "./website-card"
 import type { Section, Website } from "@/lib/types"
 
-// 图标映射
-const iconMap: Record<string, any> = {
-  bitcoin: "₿",
-  ethereum: "Ξ",
-  defi: "🏦",
-  nft: "🎨",
-  tools: "🛠️",
-  news: "📰",
-  education: "📚",
-  trading: "📈",
-  wallet: "👛",
-  bridge: "🌉",
-  dao: "🏛️",
-  gamefi: "🎮",
-  metaverse: "🌐",
-  layer2: "⚡",
-  analytics: "📊",
-  security: "🔒",
-  social: "👥",
-  infrastructure: "🏗️",
-  research: "🔬",
-  portfolio: "💼",
-}
-
 interface NavigationSectionsProps {
-  sectionsData: Section[]
-  websitesData: Website[]
+  className?: string
 }
 
-export function NavigationSections({ sectionsData, websitesData }: NavigationSectionsProps) {
-  const [isDirectoryOpen, setIsDirectoryOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+export function NavigationSections({ className }: NavigationSectionsProps) {
+  const [sections, setSections] = useState<Section[]>([])
+  const [websites, setWebsites] = useState<Website[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 检测移动端
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+  const loadData = async () => {
+    try {
+      console.log("开始加载数据...")
+      setLoading(true)
+      setError(null)
+
+      // 并行获取分区和网站数据
+      const [sectionsResponse, websitesResponse] = await Promise.all([fetch("/api/sections"), fetch("/api/websites")])
+
+      if (!sectionsResponse.ok) {
+        const errorData = await sectionsResponse.json()
+        throw new Error(errorData.error || "获取分区失败")
+      }
+
+      if (!websitesResponse.ok) {
+        const errorData = await websitesResponse.json()
+        throw new Error(errorData.error || "获取网站失败")
+      }
+
+      const sectionsData = await sectionsResponse.json()
+      const websitesData = await websitesResponse.json()
+
+      console.log("分区数据:", sectionsData)
+      console.log("网站数据:", websitesData)
+
+      // 验证数据格式
+      if (!Array.isArray(sectionsData)) {
+        throw new Error("分区数据格式错误")
+      }
+
+      if (!Array.isArray(websitesData)) {
+        throw new Error("网站数据格式错误")
+      }
+
+      setSections(sectionsData)
+      setWebsites(websitesData)
+      console.log("数据加载成功:", { sections: sectionsData.length, websites: websitesData.length })
+    } catch (error) {
+      console.error("加载数据失败:", error)
+      setError(error instanceof Error ? error.message : "未知错误")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+  useEffect(() => {
+    loadData()
   }, [])
 
-  // 数据验证和默认值处理
-  const sections = Array.isArray(sectionsData) ? sectionsData : []
-  const websites = Array.isArray(websitesData) ? websitesData : []
-
-  // 如果没有数据，显示加载状态
-  if (!sectionsData || !websitesData) {
+  // 加载状态
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-          <p className="text-gray-600 dark:text-gray-400">正在加载数据...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+        >
+          <Loader2 className="w-8 h-8 text-blue-600" />
+        </motion.div>
+        <p className="text-slate-600 dark:text-slate-400">正在加载数据...</p>
       </div>
     )
   }
 
-  // 如果数据为空，显示空状态
+  // 错误状态
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">加载失败</h3>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md">{error}</p>
+        </div>
+        <Button onClick={loadData} variant="outline" className="mt-4 bg-transparent">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          重试
+        </Button>
+      </div>
+    )
+  }
+
+  // 空数据状态
   if (sections.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>暂无分区数据，请联系管理员添加内容。</AlertDescription>
-        </Alert>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">暂无数据</h3>
+          <p className="text-slate-600 dark:text-slate-400">还没有添加任何分区</p>
+        </div>
+        <Button onClick={loadData} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          刷新
+        </Button>
       </div>
     )
-  }
-
-  // 按分区分组网站
-  const websitesBySection = websites.reduce(
-    (acc, website) => {
-      const sectionKey = website.section || "other"
-      if (!acc[sectionKey]) {
-        acc[sectionKey] = []
-      }
-      acc[sectionKey].push(website)
-      return acc
-    },
-    {} as Record<string, Website[]>,
-  )
-
-  // 滚动到指定分区
-  const scrollToSection = (sectionKey: string) => {
-    const element = document.getElementById(`section-${sectionKey}`)
-    if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest",
-      })
-
-      // 移动端点击后关闭目录
-      if (isMobile) {
-        setIsDirectoryOpen(false)
-      }
-    }
   }
 
   return (
-    <div className="space-y-8">
-      {/* 移动端目录 */}
-      {isMobile && (
-        <div className="sticky top-4 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-lg border border-gray-200/60 dark:border-gray-700/60 shadow-sm">
-          <Collapsible open={isDirectoryOpen} onOpenChange={setIsDirectoryOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-4 h-auto font-medium">
-                <div className="flex items-center gap-2">
-                  <Grid className="w-5 h-5 text-blue-500" />
-                  <span>浏览分类目录</span>
-                </div>
-                {isDirectoryOpen ? (
-                  <ChevronUp className="w-5 h-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
+    <div className={className}>
+      {sections.map((section, sectionIndex) => {
+        // 使用section.key来匹配网站的section字段
+        const sectionWebsites = websites.filter((website) => website.section === section.key)
 
-            <CollapsibleContent>
-              <AnimatePresence>
-                {isDirectoryOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="border-t border-gray-200/60 dark:border-gray-700/60"
-                  >
-                    <div className="p-4 grid grid-cols-2 gap-3">
-                      {sections.map((section) => {
-                        const sectionWebsites = websitesBySection[section.key] || []
-                        const icon = iconMap[section.icon] || section.icon || "📁"
-
-                        return (
-                          <motion.button
-                            key={section.key}
-                            onClick={() => scrollToSection(section.key)}
-                            className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-gray-200/50 dark:border-gray-700/50 transition-all duration-200 text-left group"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <div className="text-lg flex-shrink-0">{icon}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                                {section.title}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {sectionWebsites.length} 个网站
-                              </div>
-                            </div>
-                          </motion.button>
-                        )
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      )}
-
-      {/* 分区内容 */}
-      {sections.map((section) => {
-        const sectionWebsites = websitesBySection[section.key] || []
-
-        // 如果该分区没有网站，跳过显示
         if (sectionWebsites.length === 0) {
           return null
         }
 
-        const icon = iconMap[section.icon] || section.icon || "📁"
-
         return (
           <motion.section
-            key={section.key}
-            id={`section-${section.key}`}
-            initial={{ opacity: 0, y: 20 }}
+            key={section.id}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="scroll-mt-20"
+            transition={{ delay: sectionIndex * 0.1, duration: 0.6 }}
+            className="mb-12"
           >
             {/* 分区标题 */}
-            <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/60 dark:border-gray-700/60">
-              <div className="text-2xl">{icon}</div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{section.title}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{sectionWebsites.length} 个网站</p>
+            <div className="flex items-center gap-4 mb-6">
+              {/* 分区图标 - 添加旋转效果 */}
+              <motion.div
+                whileHover={{ rotate: 360, scale: 1.1 }}
+                transition={{ duration: 0.5 }}
+                className="text-3xl p-3 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-600"
+              >
+                {section.icon}
+              </motion.div>
+
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-1">{section.title}</h2>
+                <div className="h-1 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-full w-20"></div>
+              </div>
+
+              <div className="text-sm text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-800/50 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-600">
+                {sectionWebsites.length} 个网站
               </div>
             </div>
 
-            {/* 网站卡片网格 - 确保等高 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr">
-              {sectionWebsites.map((website) => (
-                <WebsiteCard key={website.id} website={website} />
+            {/* 网站网格 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sectionWebsites.map((website, websiteIndex) => (
+                <WebsiteCard key={website.id} website={website} index={websiteIndex} />
               ))}
             </div>
           </motion.section>
         )
       })}
-
-      {/* 如果没有任何网站 */}
-      {websites.length === 0 && (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Alert className="max-w-md">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>暂无网站数据，请联系管理员添加内容。</AlertDescription>
-          </Alert>
-        </div>
-      )}
     </div>
   )
 }
