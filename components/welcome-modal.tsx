@@ -24,32 +24,51 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
   // 确保组件已挂载，避免SSR问题
   useEffect(() => {
     setMounted(true)
+    console.log("✅ WelcomeModal 组件已挂载")
   }, [])
 
   // 检查是否应该显示欢迎弹窗
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || sections.length === 0) {
+      console.log("❌ 不满足显示条件:", { mounted, sectionsLength: sections.length })
+      return
+    }
 
-    const shouldShow = localStorage.getItem("welcome-modal-dismissed") !== "true"
-    if (shouldShow && sections.length > 0) {
+    console.log("🔍 检查是否显示欢迎弹窗...")
+
+    // 检查localStorage状态
+    const dismissed = localStorage.getItem("welcome-modal-dismissed")
+    console.log("📱 localStorage状态:", dismissed)
+
+    const shouldShow = dismissed !== "true"
+    console.log("🎯 是否应该显示:", shouldShow)
+
+    if (shouldShow) {
+      console.log("⏰ 准备在1秒后显示欢迎弹窗...")
       // 延迟1秒显示，让页面先加载完成
       const timer = setTimeout(() => {
+        console.log("🎉 显示欢迎弹窗！")
         setIsOpen(true)
       }, 1000)
       return () => clearTimeout(timer)
+    } else {
+      console.log("🚫 欢迎弹窗已被禁用")
     }
   }, [mounted, sections.length])
 
   // 关闭弹窗
   const handleClose = () => {
+    console.log("❌ 关闭欢迎弹窗，dontShowAgain:", dontShowAgain)
     setIsOpen(false)
     if (dontShowAgain) {
       localStorage.setItem("welcome-modal-dismissed", "true")
+      console.log("💾 已设置不再显示")
     }
   }
 
   // 点击分区跳转
   const handleSectionClick = (sectionKey: string) => {
+    console.log("🔗 点击分区:", sectionKey)
     onSectionClick(sectionKey)
     handleClose()
   }
@@ -60,7 +79,12 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
     return sectionWebsites.length > 0
   })
 
-  if (!mounted) return null
+  if (!mounted) {
+    console.log("⏳ 组件未挂载，不渲染")
+    return null
+  }
+
+  console.log("🎨 WelcomeModal 渲染，isOpen:", isOpen)
 
   return (
     <AnimatePresence>
@@ -157,7 +181,7 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
                         className="flex items-center gap-2"
                       >
                         关注
-                        <ExternalLink className="w-4 h-4" />
+                        <ExternalLink className="w-4 w-4" />
                       </a>
                     </Button>
                   </div>

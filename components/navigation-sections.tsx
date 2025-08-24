@@ -6,7 +6,6 @@ import { Loader2, RefreshCw, AlertCircle, ChevronDown, Menu } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { WebsiteCard } from "./website-card"
-import { WelcomeModal } from "./welcome-modal"
 import type { Section, Website } from "@/lib/types"
 
 interface NavigationSectionsProps {
@@ -23,7 +22,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   const loadData = async () => {
     try {
-      console.log("开始加载数据...")
+      console.log("NavigationSections: 开始加载数据...")
       setLoading(true)
       setError(null)
 
@@ -43,8 +42,8 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
       const sectionsData = await sectionsResponse.json()
       const websitesData = await websitesResponse.json()
 
-      console.log("分区数据:", sectionsData)
-      console.log("网站数据:", websitesData)
+      console.log("NavigationSections: 分区数据:", sectionsData)
+      console.log("NavigationSections: 网站数据:", websitesData)
 
       // 验证数据格式
       if (!Array.isArray(sectionsData)) {
@@ -57,9 +56,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
       setSections(sectionsData)
       setWebsites(websitesData)
-      console.log("数据加载成功:", { sections: sectionsData.length, websites: websitesData.length })
+      console.log("NavigationSections: 数据加载成功:", { sections: sectionsData.length, websites: websitesData.length })
     } catch (error) {
-      console.error("加载数据失败:", error)
+      console.error("NavigationSections: 加载数据失败:", error)
       setError(error instanceof Error ? error.message : "未知错误")
     } finally {
       setLoading(false)
@@ -208,9 +207,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   return (
     <div className={className}>
-      {/* 欢迎弹窗 */}
-      <WelcomeModal sections={sections} websites={websites} onSectionClick={scrollToSection} />
-
       {/* 移动端导航菜单 */}
       <MobileNavigationMenu />
 
@@ -226,6 +222,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
         return (
           <motion.section
             key={section.id}
+            id={`section-${section.key}`} // 添加 ID 用于滚动定位
             ref={(el) => {
               sectionRefs.current[section.key] = el
             }}

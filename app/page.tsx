@@ -3,6 +3,7 @@ import { SidebarProvider } from "@/components/sidebar-context"
 import { Sidebar } from "@/components/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NavigationSections } from "@/components/navigation-sections"
+import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper"
 
 function LoadingFallback() {
   return (
@@ -20,6 +21,9 @@ export default function HomePage() {
     <SidebarProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Sidebar />
+
+        {/* 欢迎弹窗 - 移到最外层 */}
+        <WelcomeModalWrapper />
 
         <main className="transition-all duration-300 sidebar-expanded">
           {/* 头部区域 */}
