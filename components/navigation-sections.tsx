@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Loader2, RefreshCw, AlertCircle } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Loader2, RefreshCw, AlertCircle, ChevronDown, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { WebsiteCard } from "./website-card"
 import type { Section, Website } from "@/lib/types"
 
@@ -16,6 +17,8 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
   const [websites, setWebsites] = useState<Website[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({})
 
   const loadData = async () => {
     try {
@@ -65,6 +68,89 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
   useEffect(() => {
     loadData()
   }, [])
+
+  // 滚动到指定分区
+  const scrollToSection = (sectionKey: string) => {
+    const element = sectionRefs.current[sectionKey]
+    if (element) {
+      const offset = 100 // 偏移量，避免被固定头部遮挡
+      const elementPosition = element.offsetTop - offset
+      window.scrollTo({
+        top: elementPosition,
+        behavior: "smooth",
+      })
+      setShowMobileMenu(false) // 关闭移动端菜单
+    }
+  }
+
+  // 移动端导航菜单
+  const MobileNavigationMenu = () => {
+    const sectionsWithWebsites = sections.filter((section) => {
+      const sectionWebsites = websites.filter((website) => website.section === section.key)
+      return sectionWebsites.length > 0
+    })
+
+    return (
+      <div className="md:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 mb-6">
+        <div className="px-4 py-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+            className="w-full justify-between bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700"
+          >
+            <div className="flex items-center gap-2">
+              <Menu className="w-4 h-4" />
+              <span>快速导航</span>
+            </div>
+            <motion.div animate={{ rotate: showMobileMenu ? 180 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronDown className="w-4 h-4" />
+            </motion.div>
+          </Button>
+
+          <AnimatePresence>
+            {showMobileMenu && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <Card className="mt-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700">
+                  <CardContent className="p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {sectionsWithWebsites.map((section) => {
+                        const sectionWebsites = websites.filter((website) => website.section === section.key)
+                        return (
+                          <motion.button
+                            key={section.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => scrollToSection(section.key)}
+                            className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+                          >
+                            <span className="text-lg">{section.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                                {section.title}
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">
+                                {sectionWebsites.length} 个
+                              </div>
+                            </div>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    )
+  }
 
   // 加载状态
   if (loading) {
@@ -116,6 +202,10 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   return (
     <div className={className}>
+      {/* 移动端导航菜单 */}
+      <MobileNavigationMenu />
+
+      {/* 分区内容 */}
       {sections.map((section, sectionIndex) => {
         // 使用section.key来匹配网站的section字段
         const sectionWebsites = websites.filter((website) => website.section === section.key)
@@ -127,6 +217,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
         return (
           <motion.section
             key={section.id}
+            ref={(el) => {
+              sectionRefs.current[section.key] = el
+            }}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: sectionIndex * 0.1, duration: 0.6 }}
@@ -134,7 +227,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
           >
             {/* 分区标题 */}
             <div className="flex items-center gap-4 mb-6">
-              {/* 分区图标 - 添加旋转效果 */}
+              {/* 分区图标 - 旋转效果 */}
               <motion.div
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.5 }}
