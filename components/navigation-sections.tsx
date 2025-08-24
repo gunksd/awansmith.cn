@@ -96,14 +96,14 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
           <Button
             variant="outline"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="w-full justify-between bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700"
+            className="w-full justify-between bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-800/30 dark:hover:to-purple-800/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 font-medium py-3"
           >
             <div className="flex items-center gap-2">
-              <Menu className="w-4 h-4" />
-              <span>快速导航</span>
+              <Menu className="w-5 h-5" />
+              <span>📚 快速导航目录</span>
             </div>
             <motion.div animate={{ rotate: showMobileMenu ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-5 h-5" />
             </motion.div>
           </Button>
 
@@ -116,9 +116,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden"
               >
-                <Card className="mt-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700">
-                  <CardContent className="p-3">
-                    <div className="grid grid-cols-2 gap-2">
+                <Card className="mt-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-slate-200 dark:border-slate-700 shadow-lg">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
                       {sectionsWithWebsites.map((section) => {
                         const sectionWebsites = websites.filter((website) => website.section === section.key)
                         return (
@@ -127,16 +127,21 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => scrollToSection(section.key)}
-                            className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+                            className="w-full flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-600/50 hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200 text-left border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600 shadow-sm hover:shadow-md"
                           >
-                            <span className="text-lg">{section.icon}</span>
+                            <div className="text-2xl p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                              {section.icon}
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                              <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">
                                 {section.title}
                               </div>
                               <div className="text-xs text-slate-500 dark:text-slate-400">
-                                {sectionWebsites.length} 个
+                                {sectionWebsites.length} 个网站
                               </div>
+                            </div>
+                            <div className="text-blue-500 dark:text-blue-400">
+                              <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
                             </div>
                           </motion.button>
                         )
@@ -202,6 +207,17 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   return (
     <div className={className}>
+      {/* 移动端使用提示 */}
+      <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">👆</div>
+          <div>
+            <p className="text-sm font-medium text-orange-700 dark:text-orange-300">点击上方"快速导航目录"按钮</p>
+            <p className="text-xs text-orange-600 dark:text-orange-400">快速跳转到任意分区</p>
+          </div>
+        </div>
+      </div>
+
       {/* 移动端导航菜单 */}
       <MobileNavigationMenu />
 

@@ -39,7 +39,9 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+              </div>
             </div>
           </header>
 
