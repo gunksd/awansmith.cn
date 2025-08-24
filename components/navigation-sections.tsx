@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, AlertCircle, ChevronDown, Menu } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { WebsiteCard } from "./website-card"
+import { WelcomeModal } from "./welcome-modal"
 import type { Section, Website } from "@/lib/types"
 
 interface NavigationSectionsProps {
@@ -207,16 +208,8 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   return (
     <div className={className}>
-      {/* 移动端使用提示 */}
-      <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20 rounded-xl border border-orange-200 dark:border-orange-700">
-        <div className="flex items-center gap-3">
-          <div className="text-2xl">👆</div>
-          <div>
-            <p className="text-sm font-medium text-orange-700 dark:text-orange-300">点击上方"快速导航目录"按钮</p>
-            <p className="text-xs text-orange-600 dark:text-orange-400">快速跳转到任意分区</p>
-          </div>
-        </div>
-      </div>
+      {/* 欢迎弹窗 */}
+      <WelcomeModal sections={sections} websites={websites} onSectionClick={scrollToSection} />
 
       {/* 移动端导航菜单 */}
       <MobileNavigationMenu />
