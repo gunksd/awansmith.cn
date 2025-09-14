@@ -104,10 +104,13 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
   const scrollToSection = (sectionKey: string) => {
     const element = sectionRefs.current[sectionKey]
     if (element) {
-      const offset = 100 // 偏移量，避免被固定头部遮挡
+      const headerHeight = 80 // 头部高度
+      const mobileMenuHeight = showMobileMenu ? 200 : 80 // 移动端菜单高度（展开/收起状态）
+      const offset = headerHeight + mobileMenuHeight + 20 // 总偏移量加上额外间距
       const elementPosition = element.offsetTop - offset
+
       window.scrollTo({
-        top: elementPosition,
+        top: Math.max(0, elementPosition), // 确保不会滚动到负数位置
         behavior: "smooth",
       })
       setShowMobileMenu(false) // 关闭移动端菜单
