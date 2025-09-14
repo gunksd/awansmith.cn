@@ -36,9 +36,7 @@ export default function HomePage() {
                 </div>
 
                 <div>
-                  <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    蓬门今始为君开
-                  </h1>
+                  <h1 className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">蓬门今始为君开</h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400 hidden sm:block">最全面的区块链资源导航</p>
                 </div>
               </div>
