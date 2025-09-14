@@ -100,17 +100,19 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     }
   }, [])
 
-  // 滚动到指定分区
   const scrollToSection = (sectionKey: string) => {
     const element = sectionRefs.current[sectionKey]
     if (element) {
-      const headerHeight = 80 // 头部高度
-      const mobileMenuHeight = showMobileMenu ? 200 : 80 // 移动端菜单高度（展开/收起状态）
-      const offset = headerHeight + mobileMenuHeight + 20 // 总偏移量加上额外间距
+      // 获取实际的目录高度
+      const mobileMenuElement = document.querySelector(".md\\:hidden.sticky")
+      const mobileMenuHeight = mobileMenuElement ? mobileMenuElement.getBoundingClientRect().height : 80
+
+      // 计算精确偏移量：目录高度 + 一点间距，让分区图标刚好在目录下方
+      const offset = mobileMenuHeight + 10
       const elementPosition = element.offsetTop - offset
 
       window.scrollTo({
-        top: Math.max(0, elementPosition), // 确保不会滚动到负数位置
+        top: Math.max(0, elementPosition),
         behavior: "smooth",
       })
       setShowMobileMenu(false) // 关闭移动端菜单
