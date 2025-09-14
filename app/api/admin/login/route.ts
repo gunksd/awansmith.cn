@@ -6,13 +6,25 @@ import { sql } from "@/lib/database"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
 
+export async function GET() {
+  console.log("[v0] 管理员登录API GET请求测试")
+  return NextResponse.json({
+    message: "管理员登录API正常工作",
+    timestamp: new Date().toISOString(),
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] 开始处理管理员登录请求")
+    console.log("=".repeat(50))
+    console.log("[v0] 🚀 开始处理管理员登录请求")
+    console.log("=".repeat(50))
+
     const { username, password } = await request.json()
 
-    console.log("[v0] 接收到的用户名:", username)
-    console.log("[v0] 接收到的密码长度:", password?.length)
+    console.log("[v0] 📝 接收到的用户名:", username)
+    console.log("[v0] 🔐 接收到的密码长度:", password?.length)
+    console.log("[v0] 🔐 接收到的密码:", password) // 临时显示密码用于调试
 
     if (!username || !password) {
       console.log("[v0] 用户名或密码为空")
@@ -31,6 +43,7 @@ export async function POST(request: NextRequest) {
       console.log("[v0] 用户ID:", result[0].id)
       console.log("[v0] 密码哈希存在:", !!result[0].password_hash)
       console.log("[v0] 密码哈希长度:", result[0].password_hash?.length)
+      console.log("[v0] 密码哈希前20个字符:", result[0].password_hash?.substring(0, 20))
     }
 
     if (result.length === 0) {
@@ -40,6 +53,22 @@ export async function POST(request: NextRequest) {
 
     const admin = result[0]
     console.log("[v0] 开始验证密码")
+
+    if (username === "awan" && password === "awansmith123") {
+      console.log("[v0] 🧪 特殊测试：验证awan用户的密码")
+      const expectedHash = "$2a$12$LQv3c1yqBwEHXLAw98qDiOvvHPKHHO.BL25WdRC09NPjdgMRUbYvS"
+      console.log("[v0] 🧪 数据库中的哈希:", admin.password_hash)
+      console.log("[v0] 🧪 期望的哈希:", expectedHash)
+      console.log("[v0] 🧪 哈希是否匹配:", admin.password_hash === expectedHash)
+
+      // 手动测试bcrypt
+      try {
+        const testResult = await bcrypt.compare("awansmith123", expectedHash)
+        console.log("[v0] 🧪 手动bcrypt测试结果:", testResult)
+      } catch (testError) {
+        console.log("[v0] 🧪 手动bcrypt测试失败:", testError)
+      }
+    }
 
     let isPasswordValid = false
     try {
@@ -52,12 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       console.log("[v0] 密码验证失败")
-      if (password === admin.password_hash) {
-        console.log("[v0] 检测到明文密码匹配，可能密码未加密")
-        isPasswordValid = true
-      } else {
-        return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
-      }
+      return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
     }
 
     console.log("[v0] 密码验证成功，生成JWT token")
@@ -94,7 +118,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("[v0] 登录过程中发生错误:", error)
+    console.error("=".repeat(50))
+    console.error("[v0] ❌ 登录过程中发生错误:", error)
+    console.error("=".repeat(50))
     return NextResponse.json({ error: "登录失败，请重试" }, { status: 500 })
   }
 }
