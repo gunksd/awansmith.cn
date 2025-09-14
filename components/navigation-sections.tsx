@@ -27,9 +27,24 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
       setError(null)
 
       const timestamp = Date.now()
+      const randomParam = Math.random().toString(36).substring(7)
       const [sectionsResponse, websitesResponse] = await Promise.all([
-        fetch(`/api/sections?t=${timestamp}`, { cache: "no-store" }),
-        fetch(`/api/websites?t=${timestamp}`, { cache: "no-store" }),
+        fetch(`/api/sections?t=${timestamp}&r=${randomParam}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }),
+        fetch(`/api/websites?t=${timestamp}&r=${randomParam}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }),
       ])
 
       if (!sectionsResponse.ok) {
@@ -70,6 +85,19 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   useEffect(() => {
     loadData()
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("页面重新可见，刷新数据...")
+        loadData()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [])
 
   // 滚动到指定分区

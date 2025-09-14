@@ -5,6 +5,9 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NavigationSections } from "@/components/navigation-sections"
 import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
