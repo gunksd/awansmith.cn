@@ -40,8 +40,12 @@ export function WelcomeModalWrapper() {
       console.log("WelcomeModalWrapper: 开始加载数据...")
       setLoading(true)
 
-      // 并行获取分区和网站数据
-      const [sectionsResponse, websitesResponse] = await Promise.all([fetch("/api/sections"), fetch("/api/websites")])
+      // 添加时间戳防止缓存
+      const timestamp = Date.now()
+      const [sectionsResponse, websitesResponse] = await Promise.all([
+        fetch(`/api/sections?t=${timestamp}`),
+        fetch(`/api/websites?t=${timestamp}`),
+      ])
 
       if (!sectionsResponse.ok || !websitesResponse.ok) {
         throw new Error("获取数据失败")
@@ -53,6 +57,7 @@ export function WelcomeModalWrapper() {
       console.log("WelcomeModalWrapper: 数据加载成功", {
         sections: sectionsData.length,
         websites: websitesData.length,
+        sectionsOrder: sectionsData.map((s: Section) => ({ title: s.title, sort_order: s.sort_order })),
       })
 
       setSections(sectionsData)
@@ -66,6 +71,19 @@ export function WelcomeModalWrapper() {
 
   useEffect(() => {
     loadData()
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("页面重新可见，刷新欢迎弹窗数据")
+        loadData()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [])
 
   // 只有在数据加载完成且有分区数据时才渲染 WelcomeModal

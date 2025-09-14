@@ -26,8 +26,11 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
       setLoading(true)
       setError(null)
 
-      // 并行获取分区和网站数据
-      const [sectionsResponse, websitesResponse] = await Promise.all([fetch("/api/sections"), fetch("/api/websites")])
+      const timestamp = Date.now()
+      const [sectionsResponse, websitesResponse] = await Promise.all([
+        fetch(`/api/sections?t=${timestamp}`, { cache: "no-store" }),
+        fetch(`/api/websites?t=${timestamp}`, { cache: "no-store" }),
+      ])
 
       if (!sectionsResponse.ok) {
         const errorData = await sectionsResponse.json()
