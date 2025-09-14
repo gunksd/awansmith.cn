@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
     const result = await sql`SELECT id, username, password_hash FROM admin_users WHERE username = ${username}`
 
     console.log("[v0] 数据库查询结果:", result)
+    console.log("[v0] 查询到的用户数量:", result.length)
+    if (result.length > 0) {
+      console.log("[v0] 用户ID:", result[0].id)
+      console.log("[v0] 用户名:", result[0].username)
+      console.log("[v0] 密码哈希长度:", result[0].password_hash?.length)
+      console.log("[v0] 密码哈希前缀:", result[0].password_hash?.substring(0, 10))
+    }
 
     if (result.length === 0) {
       console.log("[v0] 未找到管理员用户")
@@ -29,9 +36,13 @@ export async function POST(request: NextRequest) {
 
     const admin = result[0]
     console.log("[v0] 找到管理员用户，验证密码")
+    console.log("[v0] 输入的密码长度:", password.length)
+    console.log("[v0] 存储的密码哈希:", admin.password_hash)
 
     // 验证密码
     const isPasswordValid = await bcrypt.compare(password, admin.password_hash)
+
+    console.log("[v0] 密码验证结果:", isPasswordValid)
 
     if (!isPasswordValid) {
       console.log("[v0] 密码验证失败")
