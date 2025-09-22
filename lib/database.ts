@@ -4,8 +4,61 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set")
 }
 
-// 创建数据库连接
-export const sql = neon(process.env.DATABASE_URL)
+export const sql = neon(process.env.DATABASE_URL, {
+  // 添加连接配置选项
+  fullResults: false,
+  arrayMode: false,
+})
+
+let isConnected = true
+let lastHealthCheck = 0
+const HEALTH_CHECK_INTERVAL = 30000 // 30秒
+
+export const healthCheck = async () => {
+  const now = Date.now()
+  if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL && isConnected) {
+    return isConnected
+  }
+
+  try {
+    await sql`SELECT 1`
+    isConnected = true
+    lastHealthCheck = now
+    console.log("[DATABASE] 健康检查通过")
+  } catch (error) {
+    isConnected = false
+    console.error("[DATABASE] 健康检查失败:", error)
+  }
+
+  return isConnected
+}
+
+export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 3) => {
+  let retryCount = 0
+
+  while (retryCount < maxRetries) {
+    try {
+      // 执行健康检查
+      await healthCheck()
+
+      if (!isConnected && retryCount === 0) {
+        throw new Error("数据库连接不可用")
+      }
+
+      return await queryFn()
+    } catch (error) {
+      retryCount++
+      console.error(`[DATABASE] 查询失败 (尝试 ${retryCount}/${maxRetries}):`, error)
+
+      if (retryCount >= maxRetries) {
+        throw error
+      }
+
+      // 指数退避重试
+      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
+    }
+  }
+}
 
 // 导出查询函数
 export const query = async (text: string, params: any[] = []) => {
@@ -17,7 +70,7 @@ export const query = async (text: string, params: any[] = []) => {
     })
 
     console.log("[v0] 执行SQL查询:", sqlQuery)
-    const result = await sql(sqlQuery)
+    const result = await executeQuery(() => sql(sqlQuery))
     console.log("[v0] 查询结果:", result)
 
     return { rows: result }
@@ -56,7 +109,7 @@ export interface DatabaseSection {
 // 数据库连接测试函数
 export async function testConnection() {
   try {
-    const result = await sql`SELECT 1 as test`
+    const result = await executeQuery(() => sql`SELECT 1 as test`)
     console.log("数据库连接成功:", result)
     return true
   } catch (error) {
@@ -68,7 +121,7 @@ export async function testConnection() {
 // 获取数据库版本信息
 export async function getDatabaseInfo() {
   try {
-    const result = await sql`SELECT version()`
+    const result = await executeQuery(() => sql`SELECT version()`)
     return result[0]
   } catch (error) {
     console.error("获取数据库信息失败:", error)
@@ -79,10 +132,12 @@ export async function getDatabaseInfo() {
 // 获取所有网站
 export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
   try {
-    const websites = await sql`
+    const websites = await executeQuery(
+      () => sql`
       SELECT * FROM websites 
       ORDER BY section, sort_order ASC, created_at DESC
-    `
+    `,
+    )
     return websites as DatabaseWebsite[]
   } catch (error) {
     console.error("获取网站数据失败:", error)
@@ -93,11 +148,13 @@ export async function getAllWebsites(): Promise<DatabaseWebsite[]> {
 // 根据分区获取网站
 export async function getWebsitesBySection(section: string): Promise<DatabaseWebsite[]> {
   try {
-    const websites = await sql`
+    const websites = await executeQuery(
+      () => sql`
       SELECT * FROM websites 
       WHERE section = ${section}
       ORDER BY sort_order ASC, created_at DESC
-    `
+    `,
+    )
     return websites as DatabaseWebsite[]
   } catch (error) {
     console.error("获取分区网站数据失败:", error)
@@ -116,18 +173,22 @@ export async function createWebsite(data: {
 }): Promise<DatabaseWebsite> {
   try {
     // 获取该分区的最大排序值
-    const maxOrder = await sql`
+    const maxOrder = await executeQuery(
+      () => sql`
       SELECT COALESCE(MAX(sort_order), 0) as max_order 
       FROM websites 
       WHERE section = ${data.section}
-    `
+    `,
+    )
     const nextOrder = maxOrder[0].max_order + 1
 
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       INSERT INTO websites (name, description, url, tags, custom_logo, section, sort_order)
       VALUES (${data.name}, ${data.description}, ${data.url}, ${data.tags}, ${data.customLogo || null}, ${data.section}, ${nextOrder})
       RETURNING *
-    `
+    `,
+    )
     return result[0] as DatabaseWebsite
   } catch (error) {
     console.error("创建网站失败:", error)
@@ -148,7 +209,8 @@ export async function updateWebsite(
   },
 ): Promise<DatabaseWebsite> {
   try {
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       UPDATE websites 
       SET 
         name = COALESCE(${data.name}, name),
@@ -160,7 +222,8 @@ export async function updateWebsite(
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
       RETURNING *
-    `
+    `,
+    )
     if (result.length === 0) {
       throw new Error("网站不存在")
     }
@@ -174,10 +237,12 @@ export async function updateWebsite(
 // 删除网站
 export async function deleteWebsite(id: number): Promise<boolean> {
   try {
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       DELETE FROM websites WHERE id = ${id}
       RETURNING id
-    `
+    `,
+    )
     return result.length > 0
   } catch (error) {
     console.error("删除网站失败:", error)
@@ -190,11 +255,13 @@ export async function updateWebsitesOrder(websites: { id: number; sortOrder: num
   try {
     // 使用事务批量更新
     for (const website of websites) {
-      await sql`
+      await executeQuery(
+        () => sql`
         UPDATE websites 
         SET sort_order = ${website.sortOrder}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${website.id}
-      `
+      `,
+      )
     }
     return true
   } catch (error) {
@@ -208,10 +275,12 @@ export async function updateWebsitesOrder(websites: { id: number; sortOrder: num
 // 获取所有分区
 export async function getAllSections(): Promise<DatabaseSection[]> {
   try {
-    const sections = await sql`
+    const sections = await executeQuery(
+      () => sql`
       SELECT * FROM sections 
       ORDER BY sort_order ASC, created_at ASC
-    `
+    `,
+    )
     return sections as DatabaseSection[]
   } catch (error) {
     console.error("获取分区数据失败:", error)
@@ -222,11 +291,13 @@ export async function getAllSections(): Promise<DatabaseSection[]> {
 // 获取活跃分区
 export async function getActiveSections(): Promise<DatabaseSection[]> {
   try {
-    const sections = await sql`
+    const sections = await executeQuery(
+      () => sql`
       SELECT * FROM sections 
       WHERE is_active = true
       ORDER BY sort_order ASC, created_at ASC
-    `
+    `,
+    )
     return sections as DatabaseSection[]
   } catch (error) {
     console.error("获取活跃分区数据失败:", error)
@@ -243,16 +314,20 @@ export async function createSection(data: {
 }): Promise<DatabaseSection> {
   try {
     // 获取最大排序值
-    const maxOrder = await sql`
+    const maxOrder = await executeQuery(
+      () => sql`
       SELECT COALESCE(MAX(sort_order), 0) as max_order FROM sections
-    `
+    `,
+    )
     const nextOrder = data.sortOrder || maxOrder[0].max_order + 1
 
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       INSERT INTO sections (key, title, icon, sort_order)
       VALUES (${data.key}, ${data.title}, ${data.icon || "📁"}, ${nextOrder})
       RETURNING *
-    `
+    `,
+    )
     return result[0] as DatabaseSection
   } catch (error) {
     console.error("创建分区失败:", error)
@@ -275,7 +350,8 @@ export async function updateSection(
   },
 ): Promise<DatabaseSection> {
   try {
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       UPDATE sections 
       SET 
         key = COALESCE(${data.key}, key),
@@ -286,7 +362,8 @@ export async function updateSection(
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
       RETURNING *
-    `
+    `,
+    )
     if (result.length === 0) {
       throw new Error("分区不存在")
     }
@@ -301,20 +378,24 @@ export async function updateSection(
 export async function deleteSection(id: number): Promise<boolean> {
   try {
     // 检查是否有网站使用此分区
-    const websites = await sql`
+    const websites = await executeQuery(
+      () => sql`
       SELECT COUNT(*) as count FROM websites w
       JOIN sections s ON w.section = s.key
       WHERE s.id = ${id}
-    `
+    `,
+    )
 
     if (websites[0].count > 0) {
       throw new Error("该分区下还有网站，无法删除")
     }
 
-    const result = await sql`
+    const result = await executeQuery(
+      () => sql`
       DELETE FROM sections WHERE id = ${id}
       RETURNING id
-    `
+    `,
+    )
     return result.length > 0
   } catch (error) {
     console.error("删除分区失败:", error)
@@ -327,11 +408,13 @@ export async function updateSectionsOrder(sections: { id: number; sortOrder: num
   try {
     // 使用事务批量更新
     for (const section of sections) {
-      await sql`
+      await executeQuery(
+        () => sql`
         UPDATE sections 
         SET sort_order = ${section.sortOrder}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${section.id}
-      `
+      `,
+      )
     }
     return true
   } catch (error) {
