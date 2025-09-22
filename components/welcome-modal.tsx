@@ -73,11 +73,19 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
     handleClose()
   }
 
-  // 获取有网站的分区
-  const sectionsWithWebsites = sections.filter((section) => {
-    const sectionWebsites = websites.filter((website) => website.section === section.key)
-    return sectionWebsites.length > 0
-  })
+  // 获取有网站的分区，并按排序显示
+  const [sectionsWithWebsites, setSectionsWithWebsites] = useState<Section[]>([])
+
+  useEffect(() => {
+    const filteredSections = sections
+      .filter((section) => {
+        const sectionWebsites = websites.filter((website) => website.section === section.key)
+        return sectionWebsites.length > 0
+      })
+      .sort((a, b) => a.sort_order - b.sort_order) // 确保按排序显示
+
+    setSectionsWithWebsites(filteredSections)
+  }, [sections, websites])
 
   if (!mounted) {
     console.log("⏳ 组件未挂载，不渲染")
@@ -206,7 +214,7 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
                       const sectionWebsites = websites.filter((website) => website.section === section.key)
                       return (
                         <motion.button
-                          key={section.id}
+                          key={`${section.id}-${section.sort_order}`}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.5 + index * 0.1 }}

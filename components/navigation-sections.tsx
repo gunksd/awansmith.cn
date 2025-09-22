@@ -26,8 +26,26 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
       setLoading(true)
       setError(null)
 
-      // 并行获取分区和网站数据
-      const [sectionsResponse, websitesResponse] = await Promise.all([fetch("/api/sections"), fetch("/api/websites")])
+      const timestamp = Date.now()
+      const randomParam = Math.random().toString(36).substring(7)
+      const [sectionsResponse, websitesResponse] = await Promise.all([
+        fetch(`/api/sections?t=${timestamp}&r=${randomParam}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }),
+        fetch(`/api/websites?t=${timestamp}&r=${randomParam}`, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }),
+      ])
 
       if (!sectionsResponse.ok) {
         const errorData = await sectionsResponse.json()
@@ -67,16 +85,34 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   useEffect(() => {
     loadData()
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("页面重新可见，刷新数据...")
+        loadData()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [])
 
-  // 滚动到指定分区
   const scrollToSection = (sectionKey: string) => {
     const element = sectionRefs.current[sectionKey]
     if (element) {
-      const offset = 100 // 偏移量，避免被固定头部遮挡
+      // 获取实际的目录高度
+      const mobileMenuElement = document.querySelector(".md\\:hidden.sticky")
+      const mobileMenuHeight = mobileMenuElement ? mobileMenuElement.getBoundingClientRect().height : 80
+
+      // 计算精确偏移量：目录高度 + 一点间距，让分区图标刚好在目录下方
+      const offset = mobileMenuHeight + 10
       const elementPosition = element.offsetTop - offset
+
       window.scrollTo({
-        top: elementPosition,
+        top: Math.max(0, elementPosition),
         behavior: "smooth",
       })
       setShowMobileMenu(false) // 关闭移动端菜单
