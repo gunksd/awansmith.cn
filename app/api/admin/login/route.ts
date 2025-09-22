@@ -2,16 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { sign } from "jsonwebtoken"
 import bcrypt from "bcryptjs"
-import { sql } from "@/lib/database"
+import { query } from "@/lib/database"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
-
-export async function GET() {
-  return NextResponse.json({
-    message: "管理员登录API正常工作",
-    timestamp: new Date().toISOString(),
-  })
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,21 +14,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "用户名和密码不能为空" }, { status: 400 })
     }
 
-    const result = await sql`SELECT id, username, password_hash FROM admin_users WHERE username = ${username}`
+    // 从数据库查询管理员用户
+    const result = await query("SELECT id, username, password_hash FROM admin_users WHERE username = $1", [username])
 
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
     }
 
-    const admin = result[0]
+    const admin = result.rows[0]
 
-    let isPasswordValid = false
-
-    if (username === "awan" && password === "awansmith123") {
-      isPasswordValid = true
-    } else {
-      isPasswordValid = await bcrypt.compare(password, admin.password_hash)
-    }
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(password, admin.password_hash)
 
     if (!isPasswordValid) {
       return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
@@ -69,7 +58,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("登录过程中发生错误:", error)
+    console.error("登录失败:", error)
     return NextResponse.json({ error: "登录失败，请重试" }, { status: 500 })
   }
 }

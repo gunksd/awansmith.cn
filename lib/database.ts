@@ -8,24 +8,7 @@ if (!process.env.DATABASE_URL) {
 export const sql = neon(process.env.DATABASE_URL)
 
 // 导出查询函数
-export const query = async (text: string, params: any[] = []) => {
-  try {
-    // 将传统的参数化查询转换为Neon的模板字符串格式
-    let sqlQuery = text
-    params.forEach((param, index) => {
-      sqlQuery = sqlQuery.replace(`$${index + 1}`, `'${param}'`)
-    })
-
-    console.log("[v0] 执行SQL查询:", sqlQuery)
-    const result = await sql(sqlQuery)
-    console.log("[v0] 查询结果:", result)
-
-    return { rows: result }
-  } catch (error) {
-    console.error("[v0] 数据库查询错误:", error)
-    throw error
-  }
-}
+export const query = sql
 
 // 数据库操作函数
 export interface DatabaseWebsite {

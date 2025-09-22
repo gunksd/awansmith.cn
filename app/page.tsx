@@ -5,9 +5,6 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { NavigationSections } from "@/components/navigation-sections"
 import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper"
 
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -33,8 +30,15 @@ export default function HomePage() {
           <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-4">
+                {/* 移动端侧边栏按钮 */}
+                <div className="md:hidden">
+                  <Sidebar />
+                </div>
+
                 <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">蓬门今始为君开</h1>
+                  <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    蓬门今始为君开
+                  </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400 hidden sm:block">最全面的区块链资源导航</p>
                 </div>
               </div>
