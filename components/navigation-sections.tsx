@@ -22,12 +22,10 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   const loadData = async () => {
     try {
-      console.log("NavigationSections: 开始加载数据...")
       setLoading(true)
       setError(null)
 
       const timestamp = Date.now()
-      const randomParam = Math.random().toString(36).substring(7)
       const response = await fetch(`/api/data?t=${timestamp}`, {
         cache: "no-store",
         headers: {
@@ -44,19 +42,12 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
       const data = await response.json()
 
-      console.log("NavigationSections: 数据:", data)
-
-      // 验证数据格式
       if (!Array.isArray(data.sections) || !Array.isArray(data.websites)) {
         throw new Error("数据格式错误")
       }
 
       setSections(data.sections)
       setWebsites(data.websites)
-      console.log("NavigationSections: 数据加载成功:", {
-        sections: data.sections.length,
-        websites: data.websites.length,
-      })
     } catch (error) {
       console.error("NavigationSections: 加载数据失败:", error)
       setError(error instanceof Error ? error.message : "未知错误")
@@ -70,7 +61,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log("页面重新可见，刷新数据...")
         loadData()
       }
     }
@@ -85,11 +75,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
   const scrollToSection = (sectionKey: string) => {
     const element = sectionRefs.current[sectionKey]
     if (element) {
-      // 获取实际的目录高度
       const mobileMenuElement = document.querySelector(".md\\:hidden.sticky")
       const mobileMenuHeight = mobileMenuElement ? mobileMenuElement.getBoundingClientRect().height : 80
 
-      // 计算精确偏移量：目录高度 + 一点间距，让分区图标刚好在目录下方
       const offset = mobileMenuHeight + 10
       const elementPosition = element.offsetTop - offset
 
@@ -97,7 +85,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
         top: Math.max(0, elementPosition),
         behavior: "smooth",
       })
-      setShowMobileMenu(false) // 关闭移动端菜单
+      setShowMobileMenu(false)
     }
   }
 

@@ -21,59 +21,38 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // 确保组件已挂载，避免SSR问题
   useEffect(() => {
     setMounted(true)
-    console.log("✅ WelcomeModal 组件已挂载")
   }, [])
 
-  // 检查是否应该显示欢迎弹窗
   useEffect(() => {
     if (!mounted || sections.length === 0) {
-      console.log("❌ 不满足显示条件:", { mounted, sectionsLength: sections.length })
       return
     }
 
-    console.log("🔍 检查是否显示欢迎弹窗...")
-
-    // 检查localStorage状态
     const dismissed = localStorage.getItem("welcome-modal-dismissed")
-    console.log("📱 localStorage状态:", dismissed)
-
     const shouldShow = dismissed !== "true"
-    console.log("🎯 是否应该显示:", shouldShow)
 
     if (shouldShow) {
-      console.log("⏰ 准备在1秒后显示欢迎弹窗...")
-      // 延迟1秒显示，让页面先加载完成
       const timer = setTimeout(() => {
-        console.log("🎉 显示欢迎弹窗！")
         setIsOpen(true)
       }, 1000)
       return () => clearTimeout(timer)
-    } else {
-      console.log("🚫 欢迎弹窗已被禁用")
     }
   }, [mounted, sections.length])
 
-  // 关闭弹窗
   const handleClose = () => {
-    console.log("❌ 关闭欢迎弹窗，dontShowAgain:", dontShowAgain)
     setIsOpen(false)
     if (dontShowAgain) {
       localStorage.setItem("welcome-modal-dismissed", "true")
-      console.log("💾 已设置不再显示")
     }
   }
 
-  // 点击分区跳转
   const handleSectionClick = (sectionKey: string) => {
-    console.log("🔗 点击分区:", sectionKey)
     onSectionClick(sectionKey)
     handleClose()
   }
 
-  // 获取有网站的分区，并按排序显示
   const [sectionsWithWebsites, setSectionsWithWebsites] = useState<Section[]>([])
 
   useEffect(() => {
@@ -82,17 +61,14 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
         const sectionWebsites = websites.filter((website) => website.section === section.key)
         return sectionWebsites.length > 0
       })
-      .sort((a, b) => a.sort_order - b.sort_order) // 确保按排序显示
+      .sort((a, b) => a.sort_order - b.sort_order)
 
     setSectionsWithWebsites(filteredSections)
   }, [sections, websites])
 
   if (!mounted) {
-    console.log("⏳ 组件未挂载，不渲染")
     return null
   }
-
-  console.log("🎨 WelcomeModal 渲染，isOpen:", isOpen)
 
   return (
     <AnimatePresence>

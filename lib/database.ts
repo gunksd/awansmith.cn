@@ -64,13 +64,10 @@ export const query = async (text: string, params: any[] = []) => {
       sqlQuery = sqlQuery.replace(`$${index + 1}`, `'${param}'`)
     })
 
-    console.log("[v0] 执行SQL查询:", sqlQuery)
     const result = await executeQuery(() => sql(sqlQuery))
-    console.log("[v0] 查询结果:", result)
-
     return { rows: result }
   } catch (error) {
-    console.error("[v0] 数据库查询错误:", error)
+    console.error("[DATABASE] 数据库查询错误:", error)
     throw error
   }
 }
@@ -105,7 +102,6 @@ export interface DatabaseSection {
 export async function testConnection() {
   try {
     const result = await executeQuery(() => sql`SELECT 1 as test`)
-    console.log("数据库连接成功:", result)
     return true
   } catch (error) {
     console.error("数据库连接失败:", error)

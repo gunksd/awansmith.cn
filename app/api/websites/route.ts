@@ -6,8 +6,6 @@ export const revalidate = 0
 
 export async function GET() {
   try {
-    console.log("[SERVER] 开始获取网站数据...")
-
     let retryCount = 0
     const maxRetries = 3
 
@@ -40,14 +38,6 @@ export async function GET() {
           sort_order: website.sort_order,
         }))
 
-        console.log(`[SERVER] 成功获取 ${formattedWebsites.length} 个网站，按分区排序:`)
-        const websitesBySection = formattedWebsites.reduce((acc: any, website: any) => {
-          if (!acc[website.section]) acc[website.section] = []
-          acc[website.section].push({ name: website.name, sort_order: website.sort_order })
-          return acc
-        }, {})
-        console.log(websitesBySection)
-
         const response = NextResponse.json(formattedWebsites)
         response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
         response.headers.set("Pragma", "no-cache")
@@ -62,7 +52,6 @@ export async function GET() {
           throw error
         }
 
-        // 等待一段时间后重试
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
       }
     }

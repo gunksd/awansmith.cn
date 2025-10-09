@@ -6,14 +6,11 @@ export const revalidate = 0
 
 export async function GET() {
   try {
-    console.log("[SERVER] 开始获取分区数据...")
-
     let retryCount = 0
     const maxRetries = 3
 
     while (retryCount < maxRetries) {
       try {
-        // 使用正确的字段名：key, title而不是name, description
         const sections = await sql`
           SELECT 
             id,
@@ -29,11 +26,6 @@ export async function GET() {
           ORDER BY sort_order ASC
         `
 
-        console.log(
-          `[SERVER] 成功获取 ${sections.length} 个分区，排序信息:`,
-          sections.map((s) => ({ title: s.title, sort_order: s.sort_order })),
-        )
-
         const response = NextResponse.json(sections)
         response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
         response.headers.set("Pragma", "no-cache")
@@ -48,7 +40,6 @@ export async function GET() {
           throw error
         }
 
-        // 等待一段时间后重试
         await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
       }
     }

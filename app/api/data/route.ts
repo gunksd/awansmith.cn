@@ -6,10 +6,8 @@ export const revalidate = 0
 
 export async function GET() {
   try {
-    console.log("[SERVER] 开始获取所有数据...")
     const startTime = Date.now()
 
-    // 使用单个事务并行查询sections和websites
     const [sections, websites] = await Promise.all([
       sql`
         SELECT 
@@ -52,11 +50,6 @@ export async function GET() {
       section: website.section,
       sort_order: website.sort_order,
     }))
-
-    const endTime = Date.now()
-    console.log(
-      `[SERVER] 数据获取成功: ${sections.length} 个分区, ${formattedWebsites.length} 个网站, 耗时: ${endTime - startTime}ms`,
-    )
 
     const response = NextResponse.json({
       sections,
