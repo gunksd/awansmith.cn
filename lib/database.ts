@@ -5,14 +5,17 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const sql = neon(process.env.DATABASE_URL, {
-  // 添加连接配置选项
   fullResults: false,
   arrayMode: false,
+  fetchOptions: {
+    // 设置请求超时为10秒
+    signal: AbortSignal.timeout(10000),
+  },
 })
 
 let isConnected = true
 let lastHealthCheck = 0
-const HEALTH_CHECK_INTERVAL = 30000 // 30秒
+const HEALTH_CHECK_INTERVAL = 60000 // 增加到60秒，减少频繁检查
 
 export const healthCheck = async () => {
   const now = Date.now()
@@ -24,7 +27,6 @@ export const healthCheck = async () => {
     await sql`SELECT 1`
     isConnected = true
     lastHealthCheck = now
-    console.log("[DATABASE] 健康检查通过")
   } catch (error) {
     isConnected = false
     console.error("[DATABASE] 健康检查失败:", error)
@@ -33,18 +35,11 @@ export const healthCheck = async () => {
   return isConnected
 }
 
-export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 3) => {
+export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 2) => {
   let retryCount = 0
 
   while (retryCount < maxRetries) {
     try {
-      // 执行健康检查
-      await healthCheck()
-
-      if (!isConnected && retryCount === 0) {
-        throw new Error("数据库连接不可用")
-      }
-
       return await queryFn()
     } catch (error) {
       retryCount++
@@ -54,8 +49,8 @@ export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 3) 
         throw error
       }
 
-      // 指数退避重试
-      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
+      // 减少重试等待时间：500ms, 1000ms
+      await new Promise((resolve) => setTimeout(resolve, 500 * retryCount))
     }
   }
 }

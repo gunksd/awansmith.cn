@@ -28,53 +28,35 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
       const timestamp = Date.now()
       const randomParam = Math.random().toString(36).substring(7)
-      const [sectionsResponse, websitesResponse] = await Promise.all([
-        fetch(`/api/sections?t=${timestamp}&r=${randomParam}`, {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        }),
-        fetch(`/api/websites?t=${timestamp}&r=${randomParam}`, {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        }),
-      ])
+      const response = await fetch(`/api/data?t=${timestamp}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      })
 
-      if (!sectionsResponse.ok) {
-        const errorData = await sectionsResponse.json()
-        throw new Error(errorData.error || "获取分区失败")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "获取数据失败")
       }
 
-      if (!websitesResponse.ok) {
-        const errorData = await websitesResponse.json()
-        throw new Error(errorData.error || "获取网站失败")
-      }
+      const data = await response.json()
 
-      const sectionsData = await sectionsResponse.json()
-      const websitesData = await websitesResponse.json()
-
-      console.log("NavigationSections: 分区数据:", sectionsData)
-      console.log("NavigationSections: 网站数据:", websitesData)
+      console.log("NavigationSections: 数据:", data)
 
       // 验证数据格式
-      if (!Array.isArray(sectionsData)) {
-        throw new Error("分区数据格式错误")
+      if (!Array.isArray(data.sections) || !Array.isArray(data.websites)) {
+        throw new Error("数据格式错误")
       }
 
-      if (!Array.isArray(websitesData)) {
-        throw new Error("网站数据格式错误")
-      }
-
-      setSections(sectionsData)
-      setWebsites(websitesData)
-      console.log("NavigationSections: 数据加载成功:", { sections: sectionsData.length, websites: websitesData.length })
+      setSections(data.sections)
+      setWebsites(data.websites)
+      console.log("NavigationSections: 数据加载成功:", {
+        sections: data.sections.length,
+        websites: data.websites.length,
+      })
     } catch (error) {
       console.error("NavigationSections: 加载数据失败:", error)
       setError(error instanceof Error ? error.message : "未知错误")
