@@ -8,8 +8,7 @@ export const sql = neon(process.env.DATABASE_URL, {
   fullResults: false,
   arrayMode: false,
   fetchOptions: {
-    // 设置请求超时为10秒
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(30000), // 增加到30秒
   },
 })
 
@@ -35,7 +34,7 @@ export const healthCheck = async () => {
   return isConnected
 }
 
-export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 2) => {
+export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 3) => {
   let retryCount = 0
 
   while (retryCount < maxRetries) {
@@ -43,14 +42,18 @@ export const executeQuery = async (queryFn: () => Promise<any>, maxRetries = 2) 
       return await queryFn()
     } catch (error) {
       retryCount++
+      const isTimeoutError = error?.message?.includes("timeout") || error?.message?.includes("aborted")
+
       console.error(`[DATABASE] 查询失败 (尝试 ${retryCount}/${maxRetries}):`, error)
 
       if (retryCount >= maxRetries) {
-        throw error
+        throw new Error(`数据库连接失败，请刷新页面重试`)
       }
 
-      // 减少重试等待时间：500ms, 1000ms
-      await new Promise((resolve) => setTimeout(resolve, 500 * retryCount))
+      // 针对超时错误使用更长的等待时间：2s, 4s, 6s
+      // 其他错误使用较短等待时间：500ms, 1000ms, 1500ms
+      const waitTime = isTimeoutError ? 2000 * retryCount : 500 * retryCount
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
     }
   }
 }

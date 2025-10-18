@@ -3,11 +3,10 @@ import { sql } from "@/lib/database"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
+export const maxDuration = 60
 
 export async function GET() {
   try {
-    const startTime = Date.now()
-
     const [sections, websites] = await Promise.all([
       sql`
         SELECT 
@@ -56,16 +55,18 @@ export async function GET() {
       websites: formattedWebsites,
     })
 
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
     response.headers.set("Pragma", "no-cache")
     response.headers.set("Expires", "0")
 
     return response
   } catch (error) {
     console.error("[SERVER] 获取数据失败:", error)
+
+    const errorMessage = error instanceof Error ? error.message : "未知错误"
     return NextResponse.json(
       {
-        error: "获取数据失败: " + (error as Error).message,
+        error: errorMessage.includes("timeout") ? "数据库连接超时，请刷新页面重试" : `获取数据失败: ${errorMessage}`,
       },
       { status: 500 },
     )

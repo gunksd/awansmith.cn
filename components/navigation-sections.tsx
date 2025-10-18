@@ -12,6 +12,10 @@ interface NavigationSectionsProps {
   className?: string
 }
 
+const CACHE_KEY = "navigation_data_cache"
+const CACHE_TIMESTAMP_KEY = "navigation_data_cache_timestamp"
+const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24小时缓存
+
 export function NavigationSections({ className }: NavigationSectionsProps) {
   const [sections, setSections] = useState<Section[]>([])
   const [websites, setWebsites] = useState<Website[]>([])
@@ -19,15 +23,74 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
   const [error, setError] = useState<string | null>(null)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({})
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  const loadData = async () => {
+  const loadFromCache = (): boolean => {
     try {
-      setLoading(true)
+      const cachedData = localStorage.getItem(CACHE_KEY)
+      const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
+
+      if (cachedData && cachedTimestamp) {
+        const timestamp = Number.parseInt(cachedTimestamp, 10)
+        const now = Date.now()
+
+        if (now - timestamp < CACHE_DURATION) {
+          const data = JSON.parse(cachedData)
+          if (Array.isArray(data.sections) && Array.isArray(data.websites)) {
+            setSections(data.sections)
+            setWebsites(data.websites)
+            return true
+          }
+        }
+      }
+    } catch (error) {
+      console.error("加载缓存失败:", error)
+    }
+    return false
+  }
+
+  const saveToCache = (sections: Section[], websites: Website[]) => {
+    try {
+      const data = { sections, websites }
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+    } catch (error) {
+      console.error("保存缓存失败:", error)
+    }
+  }
+
+  const clearCache = () => {
+    try {
+      localStorage.removeItem(CACHE_KEY)
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY)
+    } catch (error) {
+      console.error("清除缓存失败:", error)
+    }
+  }
+
+  const loadData = async (showLoadingState = true, forceRefresh = false) => {
+    try {
+      if (!forceRefresh && loadFromCache()) {
+        setLoading(false)
+        setError(null)
+        return
+      }
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      abortControllerRef.current = new AbortController()
+
+      if (showLoadingState) {
+        setLoading(true)
+      }
       setError(null)
 
       const timestamp = Date.now()
       const response = await fetch(`/api/data?t=${timestamp}`, {
         cache: "no-store",
+        signal: abortControllerRef.current.signal,
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
           Pragma: "no-cache",
@@ -48,27 +111,34 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
       setSections(data.sections)
       setWebsites(data.websites)
+      setError(null)
+
+      saveToCache(data.sections, data.websites)
     } catch (error) {
+      if (error?.name === "AbortError") {
+        return
+      }
+
       console.error("NavigationSections: 加载数据失败:", error)
       setError(error instanceof Error ? error.message : "未知错误")
+
+      if (!loadFromCache()) {
+        setError(error instanceof Error ? error.message : "未知错误")
+      }
     } finally {
-      setLoading(false)
+      if (showLoadingState) {
+        setLoading(false)
+      }
     }
   }
 
   useEffect(() => {
     loadData()
 
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadData()
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
   }, [])
 
@@ -89,7 +159,11 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     }
   }
 
-  // 移动端导航菜单
+  const handleRefresh = () => {
+    clearCache()
+    loadData(true, true)
+  }
+
   const MobileNavigationMenu = () => {
     const sectionsWithWebsites = sections.filter((section) => {
       const sectionWebsites = websites.filter((website) => website.section === section.key)
@@ -163,7 +237,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     )
   }
 
-  // 加载状态
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -178,7 +251,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     )
   }
 
-  // 错误状态
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -186,8 +258,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
         <div className="text-center space-y-2">
           <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">加载失败</h3>
           <p className="text-slate-600 dark:text-slate-400 max-w-md">{error}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-500">这可能是由于数据库连接超时，请稍后重试</p>
         </div>
-        <Button onClick={loadData} variant="outline" className="mt-4 bg-transparent">
+        <Button onClick={handleRefresh} variant="outline" className="mt-4 bg-transparent">
           <RefreshCw className="w-4 h-4 mr-2" />
           重试
         </Button>
@@ -195,7 +268,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     )
   }
 
-  // 空数据状态
   if (sections.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -203,7 +275,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
           <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">暂无数据</h3>
           <p className="text-slate-600 dark:text-slate-400">还没有添加任何分区</p>
         </div>
-        <Button onClick={loadData} variant="outline">
+        <Button onClick={handleRefresh} variant="outline">
           <RefreshCw className="w-4 h-4 mr-2" />
           刷新
         </Button>
@@ -213,12 +285,9 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
 
   return (
     <div className={className}>
-      {/* 移动端导航菜单 */}
       <MobileNavigationMenu />
 
-      {/* 分区内容 */}
       {sections.map((section, sectionIndex) => {
-        // 使用section.key来匹配网站的section字段
         const sectionWebsites = websites.filter((website) => website.section === section.key)
 
         if (sectionWebsites.length === 0) {
@@ -228,7 +297,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
         return (
           <motion.section
             key={section.id}
-            id={`section-${section.key}`} // 添加 ID 用于滚动定位
+            id={`section-${section.key}`}
             ref={(el) => {
               sectionRefs.current[section.key] = el
             }}
@@ -237,9 +306,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
             transition={{ delay: sectionIndex * 0.1, duration: 0.6 }}
             className="mb-12"
           >
-            {/* 分区标题 */}
             <div className="flex items-center gap-4 mb-6">
-              {/* 分区图标 - 旋转效果 */}
               <motion.div
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.5 }}
@@ -258,7 +325,6 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
               </div>
             </div>
 
-            {/* 网站网格 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {sectionWebsites.map((website, websiteIndex) => (
                 <WebsiteCard key={website.id} website={website} index={websiteIndex} />
