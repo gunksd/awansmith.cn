@@ -14,7 +14,9 @@ interface NavigationSectionsProps {
 
 const CACHE_KEY = "navigation_data_cache"
 const CACHE_TIMESTAMP_KEY = "navigation_data_cache_timestamp"
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24小时缓存
+const CACHE_VERSION_KEY = "navigation_data_cache_version"
+const CACHE_DURATION = 60 * 60 * 1000 // 1小时缓存
+const CURRENT_CACHE_VERSION = "2" // 增加版本号以清除旧缓存
 
 export function NavigationSections({ className }: NavigationSectionsProps) {
   const [sections, setSections] = useState<Section[]>([])
@@ -29,6 +31,12 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     try {
       const cachedData = localStorage.getItem(CACHE_KEY)
       const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
+      const cachedVersion = localStorage.getItem(CACHE_VERSION_KEY)
+
+      if (cachedVersion !== CURRENT_CACHE_VERSION) {
+        clearCache()
+        return false
+      }
 
       if (cachedData && cachedTimestamp) {
         const timestamp = Number.parseInt(cachedTimestamp, 10)
@@ -54,6 +62,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
       const data = { sections, websites }
       localStorage.setItem(CACHE_KEY, JSON.stringify(data))
       localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString())
+      localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION)
     } catch (error) {
       console.error("保存缓存失败:", error)
     }
@@ -63,6 +72,7 @@ export function NavigationSections({ className }: NavigationSectionsProps) {
     try {
       localStorage.removeItem(CACHE_KEY)
       localStorage.removeItem(CACHE_TIMESTAMP_KEY)
+      localStorage.removeItem(CACHE_VERSION_KEY)
     } catch (error) {
       console.error("清除缓存失败:", error)
     }
