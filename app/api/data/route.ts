@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllSections, getAllWebsites } from "@/lib/database"
+import { getActiveSections, getAllWebsites } from "@/lib/database"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -7,7 +7,7 @@ export const maxDuration = 60
 
 export async function GET() {
   try {
-    const [sections, websites] = await Promise.all([getAllSections(), getAllWebsites()])
+    const [sections, websites] = await Promise.all([getActiveSections(), getAllWebsites()])
 
     const mappedWebsites = websites.map((website) => ({
       id: website.id.toString(),
