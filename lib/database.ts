@@ -283,10 +283,23 @@ export async function updateSection(
       values.push(data.isActive)
     }
 
+    if (updates.length === 0) {
+      console.log("[updateSection] 没有字段需要更新，跳过 UPDATE")
+      const result = await sql`SELECT * FROM sections WHERE id = ${id}`
+      if (result.length === 0) {
+        throw new Error("分区不存在")
+      }
+      return result[0] as DatabaseSection
+    }
+
     updates.push("updated_at = CURRENT_TIMESTAMP")
     values.push(id)
 
     const query = `UPDATE sections SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`
+
+    console.log("[updateSection] SQL:", query)
+    console.log("[updateSection] Values:", values)
+
     const result = await sql(query, values)
 
     if (result.length === 0) {
