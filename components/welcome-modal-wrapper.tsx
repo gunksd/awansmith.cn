@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { WelcomeModal } from "./welcome-modal"
 import type { Section, Website } from "@/lib/types"
 
@@ -8,7 +8,6 @@ export function WelcomeModalWrapper() {
   const [sections, setSections] = useState<Section[]>([])
   const [websites, setWebsites] = useState<Website[]>([])
   const [loading, setLoading] = useState(true)
-  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({})
 
   const scrollToSection = (sectionKey: string) => {
     const element = document.getElementById(`section-${sectionKey}`)
@@ -32,20 +31,17 @@ export function WelcomeModalWrapper() {
       setLoading(true)
 
       const timestamp = Date.now()
-      const [sectionsResponse, websitesResponse] = await Promise.all([
-        fetch(`/api/sections?t=${timestamp}`),
-        fetch(`/api/websites?t=${timestamp}`),
-      ])
+      const response = await fetch(`/api/data?t=${timestamp}`, {
+        cache: "no-store",
+      })
 
-      if (!sectionsResponse.ok || !websitesResponse.ok) {
+      if (!response.ok) {
         throw new Error("获取数据失败")
       }
 
-      const sectionsData = await sectionsResponse.json()
-      const websitesData = await websitesResponse.json()
-
-      setSections(sectionsData)
-      setWebsites(websitesData)
+      const data = await response.json()
+      setSections(data.sections)
+      setWebsites(data.websites)
     } catch (error) {
       console.error("WelcomeModalWrapper: 加载数据失败:", error)
     } finally {

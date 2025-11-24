@@ -16,7 +16,7 @@ const CACHE_KEY = "navigation_data_cache"
 const CACHE_TIMESTAMP_KEY = "navigation_data_cache_timestamp"
 const CACHE_VERSION_KEY = "navigation_data_cache_version"
 const CACHE_DURATION = 60 * 60 * 1000 // 1小时缓存
-const CURRENT_CACHE_VERSION = "2" // 增加版本号以清除旧缓存
+const CURRENT_CACHE_VERSION = "3" // 增加版本号以清除旧缓存
 
 export function NavigationSections({ className }: NavigationSectionsProps) {
   const [sections, setSections] = useState<Section[]>([])
