@@ -262,25 +262,25 @@ export async function updateSection(
     const updates: string[] = []
     const values: any[] = []
 
-    if (data.key !== undefined) {
+    if (data.key !== undefined && data.key !== null) {
       updates.push(`key = $${updates.length + 1}`)
       values.push(data.key)
     }
-    if (data.title !== undefined) {
+    if (data.title !== undefined && data.title !== null) {
       updates.push(`title = $${updates.length + 1}`)
       values.push(data.title)
     }
-    if (data.icon !== undefined) {
+    if (data.icon !== undefined && data.icon !== null) {
       updates.push(`icon = $${updates.length + 1}`)
       values.push(data.icon)
     }
-    if (data.sortOrder !== undefined) {
+    if (data.sortOrder !== undefined && data.sortOrder !== null) {
       updates.push(`sort_order = $${updates.length + 1}`)
       values.push(data.sortOrder)
     }
-    if (data.isActive !== undefined) {
+    if (data.isActive !== undefined && data.isActive !== null) {
       updates.push(`is_active = $${updates.length + 1}`)
-      values.push(data.isActive)
+      values.push(data.isActive) // 这里的 boolean 值会被驱动正确处理
     }
 
     if (updates.length === 0) {
@@ -295,17 +295,21 @@ export async function updateSection(
     updates.push("updated_at = CURRENT_TIMESTAMP")
     values.push(id)
 
-    const query = `UPDATE sections SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`
+    const queryStr = `UPDATE sections SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`
 
-    console.log("[updateSection] SQL:", query)
-    console.log("[updateSection] Values:", values)
+    console.log("[updateSection] 执行SQL:", queryStr, "参数:", values)
 
-    const result = await sql(query, values)
+    try {
+      const result = await sql(queryStr, values)
 
-    if (result.length === 0) {
-      throw new Error("分区不存在")
+      if (result.length === 0) {
+        throw new Error("分区不存在或更新失败")
+      }
+      return result[0] as DatabaseSection
+    } catch (innerError) {
+      console.error("[updateSection] SQL执行错误:", innerError)
+      throw innerError
     }
-    return result[0] as DatabaseSection
   })
 }
 

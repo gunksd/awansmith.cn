@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { updateSection, deleteSection } from "@/lib/database"
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const id = Number.parseInt(params.id)
+    const resolvedParams = await Promise.resolve(params)
+    const id = Number.parseInt(resolvedParams.id)
     if (isNaN(id)) {
       return NextResponse.json({ error: "无效的分区ID" }, { status: 400 })
     }
@@ -31,14 +32,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     console.log(`[API] 更新成功 ID=${id}`)
     return NextResponse.json(section)
   } catch (error: any) {
-    console.error("更新分区失败:", error)
-    return NextResponse.json({ error: error.message || "更新失败", details: error.toString() }, { status: 500 })
+    console.error("更新分区失败 [CRITICAL]:", error)
+    return NextResponse.json(
+      { error: error.message || "更新失败", details: error.toString(), stack: error.stack },
+      { status: 500 },
+    )
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const id = Number.parseInt(params.id)
+    const resolvedParams = await Promise.resolve(params)
+    const id = Number.parseInt(resolvedParams.id)
     if (isNaN(id)) {
       return NextResponse.json({ error: "无效的分区ID" }, { status: 400 })
     }
@@ -50,7 +55,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     } else {
       return NextResponse.json({ error: "分区不存在" }, { status: 404 })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("删除分区失败:", error)
     return NextResponse.json({ error: error.message || "删除失败" }, { status: 500 })
   }
