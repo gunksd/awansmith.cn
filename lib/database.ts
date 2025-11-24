@@ -259,32 +259,29 @@ export async function updateSection(
   },
 ): Promise<DatabaseSection> {
   return executeQuery(async () => {
+    console.log("[updateSection] 接收到的数据:", data)
+
     const updates: string[] = []
-    const values: any[] = []
 
     if (data.key !== undefined && data.key !== null) {
-      updates.push(`key = $${updates.length + 1}`)
-      values.push(data.key)
+      updates.push(sql`key = ${data.key}`)
     }
     if (data.title !== undefined && data.title !== null) {
-      updates.push(`title = $${updates.length + 1}`)
-      values.push(data.title)
+      updates.push(sql`title = ${data.title}`)
     }
     if (data.icon !== undefined && data.icon !== null) {
-      updates.push(`icon = $${updates.length + 1}`)
-      values.push(data.icon)
+      updates.push(sql`icon = ${data.icon}`)
     }
     if (data.sortOrder !== undefined && data.sortOrder !== null) {
-      updates.push(`sort_order = $${updates.length + 1}`)
-      values.push(data.sortOrder)
+      updates.push(sql`sort_order = ${data.sortOrder}`)
     }
     if (data.isActive !== undefined && data.isActive !== null) {
-      updates.push(`is_active = $${updates.length + 1}`)
-      values.push(data.isActive) // 这里的 boolean 值会被驱动正确处理
+      console.log("[updateSection] 更新 is_active 字段为:", data.isActive)
+      updates.push(sql`is_active = ${data.isActive}`)
     }
 
     if (updates.length === 0) {
-      console.log("[updateSection] 没有字段需要更新，跳过 UPDATE")
+      console.log("[updateSection] 没有字段需要更新，返回当前数据")
       const result = await sql`SELECT * FROM sections WHERE id = ${id}`
       if (result.length === 0) {
         throw new Error("分区不存在")
@@ -292,15 +289,19 @@ export async function updateSection(
       return result[0] as DatabaseSection
     }
 
-    updates.push("updated_at = CURRENT_TIMESTAMP")
-    values.push(id)
+    updates.push(sql`updated_at = CURRENT_TIMESTAMP`)
 
-    const queryStr = `UPDATE sections SET ${updates.join(", ")} WHERE id = $${values.length} RETURNING *`
-
-    console.log("[updateSection] 执行SQL:", queryStr, "参数:", values)
+    console.log("[updateSection] 准备更新分区 ID:", id)
 
     try {
-      const result = await sql(queryStr, values)
+      const result = await sql`
+        UPDATE sections 
+        SET ${sql.unsafe(updates.join(", "))}
+        WHERE id = ${id}
+        RETURNING *
+      `
+
+      console.log("[updateSection] 更新结果:", result)
 
       if (result.length === 0) {
         throw new Error("分区不存在或更新失败")
