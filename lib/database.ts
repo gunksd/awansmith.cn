@@ -261,56 +261,42 @@ export async function updateSection(
   return executeQuery(async () => {
     console.log("[updateSection] 接收到的数据:", data)
 
-    const updates: string[] = []
-
-    if (data.key !== undefined && data.key !== null) {
-      updates.push(sql`key = ${data.key}`)
-    }
-    if (data.title !== undefined && data.title !== null) {
-      updates.push(sql`title = ${data.title}`)
-    }
-    if (data.icon !== undefined && data.icon !== null) {
-      updates.push(sql`icon = ${data.icon}`)
-    }
-    if (data.sortOrder !== undefined && data.sortOrder !== null) {
-      updates.push(sql`sort_order = ${data.sortOrder}`)
-    }
-    if (data.isActive !== undefined && data.isActive !== null) {
-      console.log("[updateSection] 更新 is_active 字段为:", data.isActive)
-      updates.push(sql`is_active = ${data.isActive}`)
+    // 获取当前记录
+    const current = await sql`SELECT * FROM sections WHERE id = ${id}`
+    if (current.length === 0) {
+      throw new Error("分区不存在")
     }
 
-    if (updates.length === 0) {
-      console.log("[updateSection] 没有字段需要更新，返回当前数据")
-      const result = await sql`SELECT * FROM sections WHERE id = ${id}`
-      if (result.length === 0) {
-        throw new Error("分区不存在")
-      }
-      return result[0] as DatabaseSection
+    // 合并更新数据，未提供的字段保持原值
+    const currentSection = current[0] as DatabaseSection
+    const updatedKey = data.key !== undefined ? data.key : currentSection.key
+    const updatedTitle = data.title !== undefined ? data.title : currentSection.title
+    const updatedIcon = data.icon !== undefined ? data.icon : currentSection.icon
+    const updatedSortOrder = data.sortOrder !== undefined ? data.sortOrder : currentSection.sort_order
+    const updatedIsActive = data.isActive !== undefined ? data.isActive : currentSection.is_active
+
+    console.log("[updateSection] 准备更新分区 ID:", id, "is_active:", updatedIsActive)
+
+    // 执行完整的 UPDATE，设置所有字段
+    const result = await sql`
+      UPDATE sections 
+      SET 
+        key = ${updatedKey},
+        title = ${updatedTitle},
+        icon = ${updatedIcon},
+        sort_order = ${updatedSortOrder},
+        is_active = ${updatedIsActive},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id}
+      RETURNING *
+    `
+
+    console.log("[updateSection] 更新结果:", result)
+
+    if (result.length === 0) {
+      throw new Error("更新失败")
     }
-
-    updates.push(sql`updated_at = CURRENT_TIMESTAMP`)
-
-    console.log("[updateSection] 准备更新分区 ID:", id)
-
-    try {
-      const result = await sql`
-        UPDATE sections 
-        SET ${sql.unsafe(updates.join(", "))}
-        WHERE id = ${id}
-        RETURNING *
-      `
-
-      console.log("[updateSection] 更新结果:", result)
-
-      if (result.length === 0) {
-        throw new Error("分区不存在或更新失败")
-      }
-      return result[0] as DatabaseSection
-    } catch (innerError) {
-      console.error("[updateSection] SQL执行错误:", innerError)
-      throw innerError
-    }
+    return result[0] as DatabaseSection
   })
 }
 
