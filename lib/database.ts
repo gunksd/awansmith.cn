@@ -1,6 +1,6 @@
-import { neon, type NeonQueryFunction } from "@neondatabase/serverless"
+import { neon } from "@neondatabase/serverless"
 
-let _sql: NeonQueryFunction<false, false> | null = null
+let _sql: ReturnType<typeof neon> | null = null
 
 function getSql() {
   if (!_sql) {
@@ -11,16 +11,10 @@ function getSql() {
   return _sql
 }
 
-export const sql = new Proxy({} as NeonQueryFunction<false, false>, {
-  apply(_target, _thisArg, args) {
-    return (getSql() as any)(...args)
-  },
-  get(_target, prop) {
-    const fn = getSql()
-    const val = (fn as any)[prop]
-    return typeof val === "function" ? val.bind(fn) : val
-  },
-})
+// Lazy wrapper: forwards both tagged template and regular function calls
+export function sql(stringsOrQuery: TemplateStringsArray | string, ...values: any[]) {
+  return (getSql() as any)(stringsOrQuery, ...values)
+}
 
 export const healthCheck = async () => {
   try {
