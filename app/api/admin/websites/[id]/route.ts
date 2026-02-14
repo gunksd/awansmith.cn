@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { updateWebsite, deleteWebsite } from "@/lib/database"
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
@@ -15,6 +16,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       section: data.section,
     })
 
+    revalidatePath("/api/data")
+    revalidatePath("/")
     return NextResponse.json(website)
   } catch (error) {
     console.error("更新网站失败:", error)
@@ -28,6 +31,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const success = await deleteWebsite(id)
 
     if (success) {
+      revalidatePath("/api/data")
+      revalidatePath("/")
       return NextResponse.json({ message: "删除成功" })
     } else {
       return NextResponse.json({ error: "删除失败" }, { status: 404 })

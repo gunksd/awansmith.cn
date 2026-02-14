@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { getAllSections, createSection } from "@/lib/database"
 
 export async function GET() {
@@ -32,6 +33,8 @@ export async function POST(request: Request) {
       sortOrder: data.sortOrder,
     })
 
+    revalidatePath("/api/data")
+    revalidatePath("/")
     return NextResponse.json(section)
   } catch (error) {
     console.error("创建分区失败:", error)

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { updateSection, deleteSection } from "@/lib/database"
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
@@ -30,6 +31,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const section = await updateSection(id, updateData)
 
     console.log(`[API] 更新成功 ID=${id}`)
+    revalidatePath("/api/data")
+    revalidatePath("/")
     return NextResponse.json(section)
   } catch (error: any) {
     console.error("更新分区失败 [CRITICAL]:", error)
@@ -51,6 +54,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const success = await deleteSection(id)
 
     if (success) {
+      revalidatePath("/api/data")
+      revalidatePath("/")
       return NextResponse.json({ message: "删除成功" })
     } else {
       return NextResponse.json({ error: "分区不存在" }, { status: 404 })

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { sql } from "@/lib/database"
 
 export async function PUT(request: NextRequest) {
@@ -23,6 +24,8 @@ export async function PUT(request: NextRequest) {
           `
         }
 
+        revalidatePath("/api/data")
+        revalidatePath("/")
         return NextResponse.json({ success: true })
       } catch (error) {
         retryCount++

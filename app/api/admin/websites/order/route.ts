@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { updateWebsitesOrder } from "@/lib/database"
 
 export async function PUT(request: Request) {
@@ -19,6 +20,8 @@ export async function PUT(request: Request) {
     const success = await updateWebsitesOrder(websites)
 
     if (success) {
+      revalidatePath("/api/data")
+      revalidatePath("/")
       return NextResponse.json({ message: "网站排序更新成功" })
     } else {
       return NextResponse.json({ error: "更新网站排序失败" }, { status: 500 })

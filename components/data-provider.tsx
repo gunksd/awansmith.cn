@@ -24,8 +24,8 @@ export const useNavigationData = () => useContext(DataContext)
 const CACHE_KEY = "nav_data"
 const CACHE_TS_KEY = "nav_data_ts"
 const CACHE_VER_KEY = "nav_data_ver"
-const CACHE_DURATION = 60 * 60 * 1000 // 1 hour
-const CACHE_VERSION = "5"
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const CACHE_VERSION = "6"
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [sections, setSections] = useState<Section[]>([])

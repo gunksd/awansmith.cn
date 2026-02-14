@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { getAllWebsites, createWebsite } from "@/lib/database"
 
 export async function GET() {
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
       section: data.section,
     })
 
+    revalidatePath("/api/data")
+    revalidatePath("/")
     return NextResponse.json(website)
   } catch (error) {
     console.error("创建网站失败:", error)
