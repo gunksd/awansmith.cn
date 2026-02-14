@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Twitter, ExternalLink } from "lucide-react"
 import Image from "next/image"
@@ -21,22 +21,13 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    if (!mounted || sections.length === 0) {
-      return
-    }
-
+    if (!mounted || sections.length === 0) return
     const dismissed = localStorage.getItem("welcome-modal-dismissed")
-    const shouldShow = dismissed !== "true"
-
-    if (shouldShow) {
-      const timer = setTimeout(() => {
-        setIsOpen(true)
-      }, 1000)
+    if (dismissed !== "true") {
+      const timer = setTimeout(() => setIsOpen(true), 800)
       return () => clearTimeout(timer)
     }
   }, [mounted, sections.length])
@@ -53,197 +44,124 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
     handleClose()
   }
 
-  const [sectionsWithWebsites, setSectionsWithWebsites] = useState<Section[]>([])
-
-  useEffect(() => {
-    const filteredSections = sections
-      .filter((section) => {
-        const sectionWebsites = websites.filter((website) => website.section === section.key)
-        return sectionWebsites.length > 0
-      })
+  const sectionsWithWebsites = useMemo(() => {
+    return sections
+      .filter((s) => websites.some((w) => w.section === s.key))
       .sort((a, b) => a.sort_order - b.sort_order)
-
-    setSectionsWithWebsites(filteredSections)
   }, [sections, websites])
 
-  if (!mounted) {
-    return null
-  }
+  if (!mounted) return null
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* 遮罩层 */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999]"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
             onClick={handleClose}
           />
 
-          {/* 弹窗内容 */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", damping: 30, stiffness: 350 }}
             className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
           >
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-2 border-blue-200 dark:border-blue-700 shadow-2xl">
-              <CardHeader className="relative pb-4">
-                {/* 关闭按钮 */}
+            <Card className="w-full max-w-2xl max-h-[85vh] overflow-hidden bg-white/98 dark:bg-slate-900/98 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-2xl">
+              <CardHeader className="relative pb-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleClose}
-                  className="absolute right-4 top-4 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="absolute right-3 top-3 w-8 h-8 rounded-full"
                 >
                   <X className="h-4 w-4" />
                 </Button>
 
-                {/* 标题区域 */}
-                <div className="text-center pr-12">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: "spring", damping: 15 }}
-                    className="text-6xl mb-4"
-                  >
-                    🌟
-                  </motion.div>
-                  <CardTitle className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                <div className="text-center pr-10">
+                  <div className="text-5xl mb-3">🌟</div>
+                  <CardTitle className="text-2xl md:text-3xl font-bold text-gradient mb-1.5">
                     欢迎来到Web3的世界
                   </CardTitle>
-                  <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base leading-relaxed">
+                  <p className="text-sm text-muted-foreground">
                     祝您的梦想和财富都能在这里找到完美答案！
                   </p>
                 </div>
               </CardHeader>
 
-              <CardContent className="overflow-y-auto max-h-[60vh] space-y-6">
-                {/* 推特关注区域 */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {/* 使用侧边栏的头像图片 */}
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-blue-500 shadow-lg"
-                      >
-                        <Image
-                          src="/avatar.png"
-                          alt="Awan Avatar"
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                        />
-                        {/* Twitter图标叠加 */}
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
-                          <Twitter className="w-3 h-3 text-white" />
-                        </div>
-                      </motion.div>
-                      <div>
-                        <h3 className="font-semibold text-slate-800 dark:text-slate-200">关注我的推特</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">获取最新的Web3资讯和更新</p>
+              <CardContent className="overflow-y-auto max-h-[60vh] space-y-5 pt-0">
+                {/* Twitter follow */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-blue-400/60 shadow-sm">
+                      <Image src="/avatar.png" alt="Awan" width={40} height={40} className="w-full h-full object-cover" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                        <Twitter className="w-2.5 h-2.5 text-white" />
                       </div>
                     </div>
-                    <Button
-                      asChild
-                      className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      <a
-                        href="https://x.com/wnyn12075574"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2"
-                      >
-                        关注
-                        <ExternalLink className="w-4 w-4" />
-                      </a>
-                    </Button>
+                    <div>
+                      <h3 className="font-semibold text-sm">关注我的推特</h3>
+                      <p className="text-xs text-muted-foreground">获取最新的Web3资讯</p>
+                    </div>
                   </div>
-                </motion.div>
+                  <Button asChild size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm">
+                    <a href="https://x.com/wnyn12075574" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                      关注 <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </Button>
+                </div>
 
                 <Separator />
 
-                {/* 分区目录 */}
+                {/* Section directory */}
                 <div>
-                  <motion.h3
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2"
-                  >
+                  <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                     📚 网站分区目录
-                    <span className="text-sm font-normal text-slate-500 dark:text-slate-400">(点击跳转到对应分区)</span>
-                  </motion.h3>
+                    <span className="text-xs font-normal text-muted-foreground">(点击跳转)</span>
+                  </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {sectionsWithWebsites.map((section, index) => {
-                      const sectionWebsites = websites.filter((website) => website.section === section.key)
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {sectionsWithWebsites.map((section) => {
+                      const count = websites.filter((w) => w.section === section.key).length
                       return (
-                        <motion.button
-                          key={`${section.id}-${section.sort_order}`}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5 + index * 0.1 }}
-                          whileHover={{ scale: 1.02, y: -2 }}
-                          whileTap={{ scale: 0.98 }}
+                        <button
+                          key={section.id}
                           onClick={() => handleSectionClick(section.key)}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-800 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 text-left shadow-sm hover:shadow-md"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/40 hover:border-blue-300/60 dark:hover:border-blue-700/40 transition-all text-left"
                         >
-                          <div className="text-2xl p-2 bg-slate-50 dark:bg-slate-700 rounded-lg">{section.icon}</div>
+                          <div className="text-xl w-8 h-8 flex items-center justify-center rounded-md bg-slate-50 dark:bg-slate-700/60">
+                            {section.icon}
+                          </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-1">{section.title}</h4>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              {sectionWebsites.length} 个精选网站
-                            </p>
+                            <h4 className="font-medium text-sm text-foreground">{section.title}</h4>
+                            <p className="text-xs text-muted-foreground">{count} 个精选网站</p>
                           </div>
-                          <div className="text-blue-500 dark:text-blue-400">
-                            <ExternalLink className="w-4 h-4" />
-                          </div>
-                        </motion.button>
+                        </button>
                       )
                     })}
                   </div>
                 </div>
 
-                {/* 底部选项 */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                  className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700"
-                >
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200/60 dark:border-slate-800">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="dont-show-again"
                       checked={dontShowAgain}
                       onCheckedChange={(checked) => setDontShowAgain(checked as boolean)}
-                      className="border-slate-400 dark:border-slate-500"
                     />
-                    <label
-                      htmlFor="dont-show-again"
-                      className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none"
-                    >
+                    <label htmlFor="dont-show-again" className="text-xs text-muted-foreground cursor-pointer select-none">
                       不再显示此欢迎页面
                     </label>
                   </div>
-
-                  <Button
-                    onClick={handleClose}
-                    className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    开始探索 🚀
+                  <Button onClick={handleClose} size="sm" className="bg-gradient-to-r from-blue-500 to-violet-500 hover:from-blue-600 hover:to-violet-600 text-white shadow-sm">
+                    开始探索
                   </Button>
-                </motion.div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

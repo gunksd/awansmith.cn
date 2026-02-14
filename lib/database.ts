@@ -1,12 +1,26 @@
-import { neon } from "@neondatabase/serverless"
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless"
 
-const DATABASE_URL = process.env.DATABASE_URL
+let _sql: NeonQueryFunction<false, false> | null = null
 
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set")
+function getSql() {
+  if (!_sql) {
+    const url = process.env.DATABASE_URL
+    if (!url) throw new Error("DATABASE_URL environment variable is not set")
+    _sql = neon(url)
+  }
+  return _sql
 }
 
-export const sql = neon(DATABASE_URL)
+export const sql = new Proxy({} as NeonQueryFunction<false, false>, {
+  apply(_target, _thisArg, args) {
+    return (getSql() as any)(...args)
+  },
+  get(_target, prop) {
+    const fn = getSql()
+    const val = (fn as any)[prop]
+    return typeof val === "function" ? val.bind(fn) : val
+  },
+})
 
 export const healthCheck = async () => {
   try {

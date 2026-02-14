@@ -2,7 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 import bcrypt from "bcryptjs"
 
-const sql = neon(process.env.DATABASE_URL!)
+export const dynamic = "force-dynamic"
+
+function getSql() {
+  return neon(process.env.DATABASE_URL!)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +18,7 @@ export async function POST(request: NextRequest) {
     const { username, password } = body
 
     // 1. 检查数据库中的所有管理员用户
+    const sql = getSql()
     const allUsers = await sql`SELECT * FROM admin_users`
     console.log("🔍 [DEBUG] 数据库中的所有用户:", allUsers)
 

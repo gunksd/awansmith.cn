@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { getActiveSections, getAllWebsites } from "@/lib/database"
 
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-export const maxDuration = 60
+// ISR: revalidate every 60 seconds instead of force-dynamic
+export const revalidate = 60
 
 export async function GET() {
   try {
@@ -20,14 +19,10 @@ export async function GET() {
       sort_order: website.sort_order,
     }))
 
-    const response = NextResponse.json({
-      sections,
-      websites: mappedWebsites,
-    })
+    const response = NextResponse.json({ sections, websites: mappedWebsites })
 
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
-    response.headers.set("Pragma", "no-cache")
-    response.headers.set("Expires", "0")
+    // Allow CDN caching with stale-while-revalidate
+    response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=120")
 
     return response
   } catch (error) {
