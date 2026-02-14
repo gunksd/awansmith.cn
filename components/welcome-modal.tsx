@@ -109,7 +109,7 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
                     </div>
                   </div>
                   <Button asChild size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm">
-                    <a href="https://x.com/wnyn12075574" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                    <a href="https://x.com/0xawansmith" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
                       关注 <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </Button>

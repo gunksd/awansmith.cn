@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { ExternalLink } from "lucide-react"
 import Image from "next/image"
@@ -16,6 +17,30 @@ interface WebsiteCardProps {
 
 export function WebsiteCard({ website, index = 0, sectionDelay = 0 }: WebsiteCardProps) {
   const cardDelay = sectionDelay + Math.min(index * 0.03, MAX_CARD_DELAY - sectionDelay)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const [isHovering, setIsHovering] = useState(false)
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    // Max 8 degrees tilt
+    setTilt({
+      x: ((y - centerY) / centerY) * -8,
+      y: ((x - centerX) / centerX) * 8,
+    })
+  }, [])
+
+  const handleMouseEnter = useCallback(() => setIsHovering(true), [])
+  const handleMouseLeave = useCallback(() => {
+    setIsHovering(false)
+    setTilt({ x: 0, y: 0 })
+  }, [])
 
   const handleClick = () => {
     window.open(website.url, "_blank", "noopener,noreferrer")
@@ -26,16 +51,43 @@ export function WebsiteCard({ website, index = 0, sectionDelay = 0 }: WebsiteCar
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: cardDelay, duration: 0.3, ease: "easeOut" }}
-      className="h-full"
+      className="h-full [perspective:800px]"
     >
       <div
+        ref={cardRef}
         onClick={handleClick}
-        className="group relative h-full cursor-pointer rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 transition-all duration-200 hover:border-blue-300/60 dark:hover:border-blue-700/40 hover:shadow-lg hover:shadow-blue-500/[0.04] hover:-translate-y-0.5"
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="group relative h-full cursor-pointer rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 transition-shadow duration-300 hover:shadow-xl hover:shadow-blue-500/[0.08] dark:hover:shadow-blue-500/[0.04]"
+        style={{
+          transform: isHovering
+            ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-4px) scale(1.02)`
+            : "rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)",
+          transition: isHovering
+            ? "transform 0.1s ease-out, box-shadow 0.3s ease"
+            : "transform 0.4s ease-out, box-shadow 0.3s ease",
+          transformStyle: "preserve-3d",
+        }}
       >
+        {/* Shine overlay */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{
+            background: isHovering
+              ? `radial-gradient(circle at ${((tilt.y / 8 + 1) / 2) * 100}% ${((tilt.x / -8 + 1) / 2) * 100}%, rgba(255,255,255,0.15) 0%, transparent 60%)`
+              : "none",
+          }}
+        />
+
         {/* Header */}
-        <div className="flex items-start gap-3.5 mb-3">
-          {/* Logo */}
-          <div className="flex-shrink-0">
+        <div className="flex items-start gap-3.5 mb-3" style={{ transform: "translateZ(20px)" }}>
+          {/* Logo with spin on hover */}
+          <motion.div
+            className="flex-shrink-0"
+            whileHover={{ rotate: 360, scale: 1.1 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+          >
             {website.customLogo ? (
               <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center ring-1 ring-slate-200/60 dark:ring-slate-700/60">
                 <Image
@@ -60,7 +112,7 @@ export function WebsiteCard({ website, index = 0, sectionDelay = 0 }: WebsiteCar
                 {website.name.charAt(0).toUpperCase()}
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Title + link icon */}
           <div className="flex-1 min-w-0">

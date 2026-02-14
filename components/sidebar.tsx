@@ -12,6 +12,60 @@ import { useSidebar } from "@/components/sidebar-context"
 import { useToast } from "@/hooks/use-toast"
 import { createPortal } from "react-dom"
 
+/* ── Animated Avatar ── */
+function AnimatedAvatar({ size = 72 }: { size?: number }) {
+  const padding = 3
+  const outerSize = size + padding * 2 + 6 // ring thickness
+
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: outerSize, height: outerSize }}>
+      {/* Rotating gradient ring */}
+      <motion.div
+        className="absolute inset-0 rounded-full"
+        style={{
+          background: "conic-gradient(from 0deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b, #10b981, #3b82f6)",
+          padding: 2.5,
+        }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+      >
+        <div className="w-full h-full rounded-full bg-white dark:bg-slate-900" />
+      </motion.div>
+
+      {/* Pulsing glow behind avatar */}
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          inset: 4,
+          background: "conic-gradient(from 180deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6)",
+          filter: "blur(8px)",
+          opacity: 0.3,
+        }}
+        animate={{ rotate: -360, scale: [1, 1.08, 1] }}
+        transition={{
+          rotate: { duration: 4, repeat: Infinity, ease: "linear" },
+          scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+        }}
+      />
+
+      {/* Avatar image */}
+      <div className="relative z-10 rounded-full overflow-hidden shadow-md" style={{ width: size, height: size }}>
+        <Image src="/avatar.png" alt="Awan Avatar" width={size} height={size} className="w-full h-full object-cover" />
+      </div>
+
+      {/* Online indicator */}
+      <div className="absolute z-20 bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-slate-900">
+        <motion.div
+          className="absolute inset-0 rounded-full bg-green-400"
+          animate={{ scale: [1, 1.6, 1], opacity: [0.7, 0, 0.7] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ── Copy Button ── */
 function CopyButton({ address, type }: { address: string; type: string }) {
   const [isCopied, setIsCopied] = useState(false)
   const { toast } = useToast()
@@ -45,9 +99,59 @@ function CopyButton({ address, type }: { address: string; type: string }) {
   )
 }
 
+/* ── 3D Tilt Card for QR codes ── */
+function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const [hovering, setHovering] = useState(false)
+
+  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const cx = rect.width / 2
+    const cy = rect.height / 2
+    setTilt({
+      x: ((e.clientY - rect.top - cy) / cy) * -10,
+      y: ((e.clientX - rect.left - cx) / cx) * 10,
+    })
+  }, [])
+
+  return (
+    <div className="[perspective:600px]">
+      <div
+        ref={ref}
+        onMouseMove={onMove}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => { setHovering(false); setTilt({ x: 0, y: 0 }) }}
+        className={className}
+        style={{
+          transform: hovering
+            ? `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(1.03)`
+            : "rotateX(0) rotateY(0) scale(1)",
+          transition: hovering ? "transform 0.1s ease-out" : "transform 0.4s ease-out",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        {/* Shine */}
+        {hovering && (
+          <div
+            className="pointer-events-none absolute inset-0 rounded-lg"
+            style={{
+              background: `radial-gradient(circle at ${((tilt.y / 10 + 1) / 2) * 100}% ${((tilt.x / -10 + 1) / 2) * 100}%, rgba(255,255,255,0.18) 0%, transparent 60%)`,
+            }}
+          />
+        )}
+        {children}
+      </div>
+    </div>
+  )
+}
+
 const btcAddress = "bc1pwswdr8jand4v8a45wuauzr6tc2fl92k7qxveqxjlk6mphmkyz3cszsj8cl"
 const ethAddress = "0x41d5408ce2b7dfd9490c0e769edd493dc878058f"
 
+/* ── Donation Section with 3D cards ── */
 function DonationSection({ showDonation, toggleDonation }: { showDonation: boolean; toggleDonation: (e: React.MouseEvent) => void }) {
   return (
     <div className="space-y-3">
@@ -62,10 +166,13 @@ function DonationSection({ showDonation, toggleDonation }: { showDonation: boole
 
       <div className={`space-y-3 transition-all duration-300 ${showDonation ? "opacity-100 max-h-[1000px]" : "opacity-0 max-h-0 overflow-hidden"}`}>
         {[
-          { name: "Bitcoin", color: "text-orange-500", addr: btcAddress, qr: "/btc-qr.png" },
-          { name: "Ethereum", color: "text-blue-500", addr: ethAddress, qr: "/eth-qr.png" },
+          { name: "Bitcoin", color: "text-orange-500", borderColor: "hover:border-orange-300 dark:hover:border-orange-700/60", addr: btcAddress, qr: "/btc-qr.png" },
+          { name: "Ethereum", color: "text-blue-500", borderColor: "hover:border-blue-300 dark:hover:border-blue-700/60", addr: ethAddress, qr: "/eth-qr.png" },
         ].map((coin) => (
-          <div key={coin.name} className="p-3.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700/40">
+          <TiltCard
+            key={coin.name}
+            className={`relative p-3.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-lg border border-slate-200/60 dark:border-slate-700/40 ${coin.borderColor} transition-colors cursor-default`}
+          >
             <div className="text-center mb-2.5">
               <h4 className={`text-xs font-semibold ${coin.color} mb-2`}>{coin.name}</h4>
               <Image src={coin.qr} alt={`${coin.name} QR`} width={88} height={88} className="mx-auto rounded-md" />
@@ -76,18 +183,19 @@ function DonationSection({ showDonation, toggleDonation }: { showDonation: boole
               </p>
               <CopyButton address={coin.addr} type={coin.name} />
             </div>
-          </div>
+          </TiltCard>
         ))}
       </div>
     </div>
   )
 }
 
+/* ── Social Links ── */
 function SocialLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="space-y-1.5">
       {[
-        { href: "https://x.com/wnyn12075574", icon: <Twitter className="h-4 w-4 text-blue-500" />, label: "Twitter" },
+        { href: "https://x.com/0xawansmith", icon: <Twitter className="h-4 w-4 text-blue-500" />, label: "Twitter" },
         { href: "https://linktr.ee/Awansmith", icon: <Image src="/logos/linktree.png" alt="Linktree" width={16} height={16} />, label: "Linktree" },
       ].map((link) => (
         <Link
@@ -106,28 +214,7 @@ function SocialLinks({ onNavigate }: { onNavigate?: () => void }) {
   )
 }
 
-function UserInfo({ size = "default" }: { size?: "default" | "compact" }) {
-  const imgSize = size === "compact" ? 56 : 72
-  return (
-    <div className="text-center">
-      <div className="relative inline-block">
-        <Image
-          src="/avatar.png"
-          alt="Awan Avatar"
-          width={imgSize}
-          height={imgSize}
-          className="rounded-full border-2 border-slate-200 dark:border-slate-700 shadow-sm"
-        />
-        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"></div>
-      </div>
-      <div className="mt-3">
-        <h3 className="font-bold text-base text-foreground">Awan Smith</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">永远学无止境</p>
-      </div>
-    </div>
-  )
-}
-
+/* ── Main Sidebar ── */
 export function Sidebar() {
   const { isCollapsed, setIsCollapsed } = useSidebar()
   const [showDonation, setShowDonation] = useState(false)
@@ -168,7 +255,15 @@ export function Sidebar() {
                 </Button>
               </div>
 
-              <UserInfo size="compact" />
+              {/* Avatar with animated frame */}
+              <div className="text-center">
+                <AnimatedAvatar size={56} />
+                <div className="mt-3">
+                  <h3 className="font-bold text-base text-foreground">Awan Smith</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">永远学无止境</p>
+                </div>
+              </div>
+
               <Separator className="my-5" />
               <SocialLinks onNavigate={() => setIsMobileOpen(false)} />
               <Separator className="my-5" />
@@ -208,20 +303,9 @@ export function Sidebar() {
       </Button>
 
       <div className="p-5 h-full overflow-y-auto">
-        {/* Avatar - always visible */}
+        {/* Avatar with animated frame */}
         <div className="text-center mb-6">
-          <div className="relative inline-block">
-            <Image
-              src="/avatar.png"
-              alt="Awan Avatar"
-              width={isCollapsed ? 48 : 72}
-              height={isCollapsed ? 48 : 72}
-              className="rounded-full border-2 border-slate-200 dark:border-slate-700 shadow-sm transition-all"
-            />
-            {!isCollapsed && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-slate-900"></div>
-            )}
-          </div>
+          <AnimatedAvatar size={isCollapsed ? 48 : 72} />
 
           {!isCollapsed && (
             <motion.div

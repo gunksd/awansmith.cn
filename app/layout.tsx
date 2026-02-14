@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "蓬门今始为君开",
     description: "专业的Web3导航网站",
-    creator: "@wnyn12075574",
+    creator: "@0xawansmith",
   },
   robots: {
     index: true,
