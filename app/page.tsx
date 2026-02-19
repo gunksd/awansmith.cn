@@ -5,6 +5,10 @@ import { Sidebar } from "@/components/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NavigationSections } from "@/components/navigation-sections"
 import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper"
+import { getActiveSections, getAllWebsites } from "@/lib/database"
+
+// 页面级 ISR：每 60 秒重新生成
+export const revalidate = 60
 
 function LoadingFallback() {
   return (
@@ -20,10 +24,27 @@ function LoadingFallback() {
   )
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  // 在服务端直接查数据库，用户收到的 HTML 就已经包含数据
+  const [sections, websites] = await Promise.all([
+    getActiveSections(),
+    getAllWebsites(),
+  ])
+
+  const mappedWebsites = websites.map((w) => ({
+    id: w.id.toString(),
+    name: w.name,
+    description: w.description,
+    url: w.url,
+    tags: w.tags,
+    customLogo: w.custom_logo,
+    section: w.section,
+    sort_order: w.sort_order,
+  }))
+
   return (
     <SidebarProvider>
-      <DataProvider>
+      <DataProvider initialSections={sections} initialWebsites={mappedWebsites}>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
           <Sidebar />
           <WelcomeModalWrapper />
