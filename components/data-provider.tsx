@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useRef,
   useCallback,
   type ReactNode,
@@ -39,10 +40,11 @@ export function DataProvider({
   initialSections,
   initialWebsites,
 }: DataProviderProps) {
+  const hasInitialData = !!(initialSections?.length || initialWebsites?.length);
   const [sections, setSections] = useState<Section[]>(initialSections ?? []);
   const [websites, setWebsites] = useState<Website[]>(initialWebsites ?? []);
-  // 如果有服务端传入的初始数据，就不需要 loading 状态
-  const [loading, setLoading] = useState(false);
+  // 有服务端数据就不转圈，没有就需要客户端加载
+  const [loading, setLoading] = useState(!hasInitialData);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -73,6 +75,16 @@ export function DataProvider({
       setLoading(false);
     }
   }, []);
+
+  // 如果服务端没拿到数据，回退到客户端获取
+  useEffect(() => {
+    if (!hasInitialData) {
+      loadData();
+    }
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, [hasInitialData, loadData]);
 
   const refresh = useCallback(() => {
     loadData();

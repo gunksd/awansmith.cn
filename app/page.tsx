@@ -1,14 +1,14 @@
-import { Suspense } from "react"
-import { SidebarProvider } from "@/components/sidebar-context"
-import { DataProvider } from "@/components/data-provider"
-import { Sidebar } from "@/components/sidebar"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { NavigationSections } from "@/components/navigation-sections"
-import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper"
-import { getActiveSections, getAllWebsites } from "@/lib/database"
+import { Suspense } from "react";
+import { SidebarProvider } from "@/components/sidebar-context";
+import { DataProvider } from "@/components/data-provider";
+import { Sidebar } from "@/components/sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { NavigationSections } from "@/components/navigation-sections";
+import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper";
+import { getActiveSections, getAllWebsites } from "@/lib/database";
 
 // 页面级 ISR：每 60 秒重新生成
-export const revalidate = 60
+export const revalidate = 60;
 
 function LoadingFallback() {
   return (
@@ -21,26 +21,36 @@ function LoadingFallback() {
         <p className="text-sm text-muted-foreground">加载中...</p>
       </div>
     </div>
-  )
+  );
+}
+
+async function fetchData() {
+  try {
+    const [sections, websites] = await Promise.all([
+      getActiveSections(),
+      getAllWebsites(),
+    ]);
+
+    const mappedWebsites = websites.map((w) => ({
+      id: w.id.toString(),
+      name: w.name,
+      description: w.description,
+      url: w.url,
+      tags: w.tags,
+      customLogo: w.custom_logo,
+      section: w.section,
+      sort_order: w.sort_order,
+    }));
+
+    return { sections, websites: mappedWebsites };
+  } catch (error) {
+    console.error("[SSR] 数据库查询失败，回退到客户端获取:", error);
+    return { sections: [], websites: [] };
+  }
 }
 
 export default async function HomePage() {
-  // 在服务端直接查数据库，用户收到的 HTML 就已经包含数据
-  const [sections, websites] = await Promise.all([
-    getActiveSections(),
-    getAllWebsites(),
-  ])
-
-  const mappedWebsites = websites.map((w) => ({
-    id: w.id.toString(),
-    name: w.name,
-    description: w.description,
-    url: w.url,
-    tags: w.tags,
-    customLogo: w.custom_logo,
-    section: w.section,
-    sort_order: w.sort_order,
-  }))
+  const { sections, websites: mappedWebsites } = await fetchData();
 
   return (
     <SidebarProvider>
@@ -77,5 +87,5 @@ export default async function HomePage() {
         </div>
       </DataProvider>
     </SidebarProvider>
-  )
+  );
 }
