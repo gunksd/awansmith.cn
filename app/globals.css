@@ -88,6 +88,8 @@
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Glass utility */
@@ -114,4 +116,21 @@ html {
 }
 .dark .glow-sm {
   box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.1);
+}
+
+/* Safe area support for iOS notch */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Better touch behavior */
+@media (hover: none) and (pointer: coarse) {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Prevent overscroll bounce on iOS */
+body {
+  overscroll-behavior-y: none;
 }

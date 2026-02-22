@@ -61,14 +61,18 @@ export default async function HomePage() {
 
           <main className="transition-all duration-300 sidebar-expanded">
             {/* Header */}
-            <header className="sticky top-0 z-30 glass border-b border-slate-200/60 dark:border-slate-800/60">
-              <div className="flex items-center justify-between px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gradient tracking-tight">
+            <header className="sticky top-0 z-30 glass border-b border-slate-200/60 dark:border-slate-800/60 safe-top">
+              <div className="flex items-center justify-between px-3 py-2.5 sm:px-6 sm:py-4">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  {/* Mobile menu button - rendered inside header */}
+                  <div className="md:hidden flex-shrink-0">
+                    <Sidebar variant="mobile-trigger" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gradient tracking-tight truncate">
                       蓬门今始为君开
                     </h1>
-                    <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground hidden sm:block mt-0.5">
                       最全面的区块链资源导航
                     </p>
                   </div>
@@ -78,7 +82,7 @@ export default async function HomePage() {
             </header>
 
             {/* Content */}
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <div className="px-3 sm:px-5 md:container md:mx-auto md:px-6 py-5 sm:py-8">
               <Suspense fallback={<LoadingFallback />}>
                 <NavigationSections />
               </Suspense>

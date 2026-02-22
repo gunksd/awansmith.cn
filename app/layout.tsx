@@ -1,15 +1,16 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import "./globals.css"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "蓬门今始为君开 - 最全面的区块链资源导航",
-  description: "专业的Web3导航网站，提供融资信息、交易数据工具、测试网水龙头、空投机会、新手教程和交易所邀请链接",
+  description:
+    "专业的Web3导航网站，提供融资信息、交易数据工具、测试网水龙头、空投机会、新手教程和交易所邀请链接",
   keywords: "Web3, 区块链, 导航, 融资, 空投, 水龙头, DeFi, NFT, 交易数据",
   authors: [{ name: "Awan Smith" }],
   openGraph: {
@@ -40,25 +41,33 @@ export const metadata: Metadata = {
   },
   generator: "v0.dev",
   // 移除icons配置，让Next.js自动使用app/icon.tsx和app/apple-icon.tsx
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover"
+        />
         <meta name="theme-color" content="#3b82f6" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
           <Toaster />
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
