@@ -7,8 +7,8 @@ import { NavigationSections } from "@/components/navigation-sections";
 import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper";
 import { getActiveSections, getAllWebsites } from "@/lib/database";
 
-// 页面级 ISR：每 60 秒重新生成
-export const revalidate = 60;
+// 强制 SSR：确保 HTML 始终引用当前部署的 JS chunks，避免白屏
+export const dynamic = "force-dynamic";
 
 function LoadingFallback() {
   return (
