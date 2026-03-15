@@ -1,62 +1,77 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { X, Twitter, ExternalLink } from "lucide-react"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
-import type { Section, Website } from "@/lib/types"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { X, Twitter, ExternalLink } from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import type { Section, Website } from "@/lib/types";
 
 interface WelcomeModalProps {
-  sections: Section[]
-  websites: Website[]
-  onSectionClick: (sectionKey: string) => void
+  sections: Section[];
+  websites: Website[];
+  onSectionClick: (sectionKey: string) => void;
 }
 
-export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModalProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
-  const [dontShowAgain, setDontShowAgain] = useState(false)
+export function WelcomeModal({
+  sections,
+  websites,
+  onSectionClick,
+}: WelcomeModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const closeTimerRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    if (sections.length === 0) return
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sections.length === 0) return;
     // Delay show to let the page settle first
     const timer = setTimeout(() => {
-      setIsOpen(true)
+      setIsOpen(true);
       // Trigger CSS transition on next frame
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => setIsVisible(true))
-      })
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [sections.length])
+        requestAnimationFrame(() => setIsVisible(true));
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [sections.length]);
 
   const handleClose = useCallback(() => {
-    setIsVisible(false)
-    // Wait for CSS transition to finish before unmounting
-    setTimeout(() => setIsOpen(false), 200)
+    setIsVisible(false);
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => setIsOpen(false), 200);
     if (dontShowAgain) {
-      localStorage.setItem("welcome-modal-dismissed", "true")
+      localStorage.setItem("welcome-modal-dismissed", "true");
     }
-  }, [dontShowAgain])
+  }, [dontShowAgain]);
 
-  const handleSectionClick = useCallback((sectionKey: string) => {
-    onSectionClick(sectionKey)
-    setIsVisible(false)
-    setTimeout(() => setIsOpen(false), 200)
-    if (dontShowAgain) {
-      localStorage.setItem("welcome-modal-dismissed", "true")
-    }
-  }, [onSectionClick, dontShowAgain])
+  const handleSectionClick = useCallback(
+    (sectionKey: string) => {
+      onSectionClick(sectionKey);
+      setIsVisible(false);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = setTimeout(() => setIsOpen(false), 200);
+      if (dontShowAgain) {
+        localStorage.setItem("welcome-modal-dismissed", "true");
+      }
+    },
+    [onSectionClick, dontShowAgain],
+  );
 
   const sectionsWithWebsites = useMemo(() => {
     return sections
       .filter((s) => websites.some((w) => w.section === s.key))
-      .sort((a, b) => a.sort_order - b.sort_order)
-  }, [sections, websites])
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [sections, websites]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <>
@@ -72,10 +87,18 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
       {/* Modal container */}
       <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 pointer-events-none">
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="欢迎来到Web3的世界"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") handleClose();
+          }}
           className="pointer-events-auto w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-xl mx-1 sm:mx-4 transition-all duration-200 ease-out"
           style={{
             opacity: isVisible ? 1 : 0,
-            transform: isVisible ? "scale(1) translateY(0)" : "scale(0.97) translateY(8px)",
+            transform: isVisible
+              ? "scale(1) translateY(0)"
+              : "scale(0.97) translateY(8px)",
           }}
         >
           {/* Header */}
@@ -106,18 +129,35 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
             <div className="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/30">
               <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-blue-400/60 shadow-sm flex-shrink-0">
-                  <Image src="/avatar.png" alt="Awan" width={40} height={40} className="w-full h-full object-cover" />
+                  <Image
+                    src="/avatar.png"
+                    alt="Awan"
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
                     <Twitter className="w-2.5 h-2.5 text-white" />
                   </div>
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm">关注我的推特</h3>
-                  <p className="text-xs text-muted-foreground">获取最新的Web3资讯</p>
+                  <p className="text-xs text-muted-foreground">
+                    获取最新的Web3资讯
+                  </p>
                 </div>
               </div>
-              <Button asChild size="sm" className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm flex-shrink-0">
-                <a href="https://x.com/0xawansmith" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+              <Button
+                asChild
+                size="sm"
+                className="bg-blue-500 hover:bg-blue-600 text-white shadow-sm flex-shrink-0"
+              >
+                <a
+                  href="https://x.com/0xawansmith"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5"
+                >
                   关注 <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </Button>
@@ -129,12 +169,16 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 📚 网站分区目录
-                <span className="text-xs font-normal text-muted-foreground">(点击跳转)</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  (点击跳转)
+                </span>
               </h3>
 
               <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                 {sectionsWithWebsites.map((section) => {
-                  const count = websites.filter((w) => w.section === section.key).length
+                  const count = websites.filter(
+                    (w) => w.section === section.key,
+                  ).length;
                   return (
                     <button
                       key={section.id}
@@ -153,7 +197,7 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
                         </p>
                       </div>
                     </button>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -164,9 +208,14 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
                 <Checkbox
                   id="dont-show-again"
                   checked={dontShowAgain}
-                  onCheckedChange={(checked) => setDontShowAgain(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setDontShowAgain(checked as boolean)
+                  }
                 />
-                <label htmlFor="dont-show-again" className="text-xs text-muted-foreground cursor-pointer select-none">
+                <label
+                  htmlFor="dont-show-again"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
+                >
                   不再显示此欢迎页面
                 </label>
               </div>
@@ -182,5 +231,5 @@ export function WelcomeModal({ sections, websites, onSectionClick }: WelcomeModa
         </div>
       </div>
     </>
-  )
+  );
 }

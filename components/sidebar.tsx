@@ -154,13 +154,13 @@ function TiltCard({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
 
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const rect = rectRef.current;
+    if (!rect) return;
     const cx = rect.width / 2;
     const cy = rect.height / 2;
     setTilt({
@@ -169,16 +169,25 @@ function TiltCard({
     });
   }, []);
 
+  const onEnter = useCallback(() => {
+    const el = ref.current;
+    if (el) rectRef.current = el.getBoundingClientRect();
+    setHovering(true);
+  }, []);
+
+  const onLeave = useCallback(() => {
+    setHovering(false);
+    setTilt({ x: 0, y: 0 });
+    rectRef.current = null;
+  }, []);
+
   return (
     <div className="[perspective:600px]">
       <div
         ref={ref}
         onMouseMove={onMove}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => {
-          setHovering(false);
-          setTilt({ x: 0, y: 0 });
-        }}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
         className={className}
         style={{
           transform: hovering
@@ -333,6 +342,14 @@ export function Sidebar({ variant }: { variant?: "mobile-trigger" }) {
   useEffect(() => {
     if (isMobileOpen) {
       document.body.style.overflow = "hidden";
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setIsMobileOpen(false);
+      };
+      document.addEventListener("keydown", handleEscape);
+      return () => {
+        document.body.style.overflow = "";
+        document.removeEventListener("keydown", handleEscape);
+      };
     } else {
       document.body.style.overflow = "";
     }

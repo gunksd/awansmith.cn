@@ -23,33 +23,48 @@ export function WebsiteCard({
   const cardDelay =
     sectionDelay + Math.min(index * 0.03, MAX_CARD_DELAY - sectionDelay);
   const cardRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
+    const rect = rectRef.current;
+    if (!rect) return;
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    // Max 8 degrees tilt
     setTilt({
       x: ((y - centerY) / centerY) * -8,
       y: ((x - centerX) / centerX) * 8,
     });
   }, []);
 
-  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const handleMouseEnter = useCallback(() => {
+    const card = cardRef.current;
+    if (card) rectRef.current = card.getBoundingClientRect();
+    setIsHovering(true);
+  }, []);
   const handleMouseLeave = useCallback(() => {
     setIsHovering(false);
     setTilt({ x: 0, y: 0 });
+    rectRef.current = null;
   }, []);
 
   const handleClick = () => {
     window.open(website.url, "_blank", "noopener,noreferrer");
   };
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        window.open(website.url, "_blank", "noopener,noreferrer");
+      }
+    },
+    [website.url],
+  );
 
   return (
     <motion.div
@@ -60,7 +75,11 @@ export function WebsiteCard({
     >
       <div
         ref={cardRef}
+        role="link"
+        tabIndex={0}
+        aria-label={`${website.name} - ${website.description}`}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -96,7 +115,7 @@ export function WebsiteCard({
             whileHover={{ rotate: 360, scale: 1.1 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
-            {website.customLogo ? (
+            {website.customLogo && !imgError ? (
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md sm:rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center ring-1 ring-slate-200/60 dark:ring-slate-700/60">
                 <Image
                   src={website.customLogo}
@@ -104,18 +123,8 @@ export function WebsiteCard({
                   width={40}
                   height={40}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = "none";
-                    const fallback = target.parentElement?.querySelector(
-                      ".fallback",
-                    ) as HTMLElement;
-                    if (fallback) fallback.classList.remove("hidden");
-                  }}
+                  onError={() => setImgError(true)}
                 />
-                <div className="fallback hidden w-full h-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
-                  {website.name.charAt(0).toUpperCase()}
-                </div>
               </div>
             ) : (
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md sm:rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-semibold text-xs sm:text-sm shadow-sm">
