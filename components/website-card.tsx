@@ -119,6 +119,7 @@ export function WebsiteCard({
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md sm:rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 flex items-center justify-center ring-1 ring-slate-200/60 dark:ring-slate-700/60">
                 <Image
                   src={website.customLogo}
+                  unoptimized={website.customLogo.startsWith("/api/logos/")}
                   alt={website.name}
                   width={40}
                   height={40}

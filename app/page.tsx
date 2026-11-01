@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { unstable_noStore as noStore } from "next/cache";
+import { publicLogo } from "@/lib/public-logo";
 import { SidebarProvider } from "@/components/sidebar-context";
 import { DataProvider } from "@/components/data-provider";
 import { Sidebar } from "@/components/sidebar";
@@ -7,8 +9,8 @@ import { NavigationSections } from "@/components/navigation-sections";
 import { WelcomeModalWrapper } from "@/components/welcome-modal-wrapper";
 import { getActiveSections, getAllWebsites } from "@/lib/database";
 
-// 强制 SSR：确保 HTML 始终引用当前部署的 JS chunks，避免白屏
-export const dynamic = "force-dynamic";
+// 后台编辑通过 revalidatePath 刷新，定时重新验证覆盖外部数据更新。
+export const revalidate = 3600;
 
 function LoadingFallback() {
   return (
@@ -37,13 +39,14 @@ async function fetchData() {
       description: w.description,
       url: w.url,
       tags: w.tags,
-      customLogo: w.custom_logo,
+      customLogo: publicLogo(w.id, w.custom_logo),
       section: w.section,
       sort_order: w.sort_order,
     }));
 
     return { sections, websites: mappedWebsites };
   } catch (error) {
+    noStore();
     console.error("[SSR] 数据库查询失败，回退到客户端获取:", error);
     return { sections: [], websites: [] };
   }

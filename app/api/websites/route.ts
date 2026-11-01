@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { publicLogo } from "@/lib/public-logo"
 import { sql } from "@/lib/database"
 
 export const dynamic = "force-dynamic"
@@ -33,7 +34,7 @@ export async function GET() {
           description: website.description,
           url: website.url,
           tags: Array.isArray(website.tags) ? website.tags : [],
-          customLogo: website.custom_logo,
+          customLogo: publicLogo(website.id, website.custom_logo),
           section: website.section,
           sort_order: website.sort_order,
         }))
